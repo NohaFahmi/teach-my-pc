@@ -1,0 +1,19 @@
+<div class="settings-page">
+  <span class="eyebrow">PREFERENCES &amp; APP DETAILS</span>
+  <h1>Settings</h1>
+  <p class="intro">A few details about this TeachMyPC installation.</p>
+  <section class="settings-card" aria-labelledby="app-details-title">
+    <div class="card-heading"><div class="app-symbol" aria-hidden="true">T</div><div><h2 id="app-details-title">Application</h2><p>Desktop runtime information</p></div></div>
+    @let state = appInfo.state();
+    @switch (state.status) {
+      @case ('loading') { <div class="info-line"><span>Backend status</span><span class="value">Checking…</span></div> }
+      @case ('available') {
+        <div class="info-line"><span>Application</span><span class="value">{{ state.info.name }}</span></div>
+        <div class="info-line"><span>Version</span><span class="value">{{ state.info.version }}</span></div>
+        <div class="info-line"><span>Backend</span><span class="value status"><i></i> Connected</span></div>
+      }
+      @case ('unavailable') { <div class="error-state" role="status"><strong>Desktop information unavailable</strong><span>{{ state.message }}</span></div> }
+    }
+  </section>
+  <section class="privacy-card"><span class="privacy-symbol" aria-hidden="true">◎</span><div><strong>Designed to stay local</strong><p>This foundation does not send your information to cloud services.</p></div></section>
+</div>

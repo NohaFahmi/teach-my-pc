@@ -1,0 +1,137 @@
+.settings-page {
+  max-width: 680px;
+  padding-top: 8px;
+}
+
+.eyebrow {
+  color: #8ea19b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .17em;
+}
+
+h1 {
+  margin: 18px 0 8px;
+  font-family: Manrope, 'DM Sans', sans-serif;
+  font-size: 42px;
+  font-weight: 500;
+  letter-spacing: -.06em;
+}
+
+.intro {
+  margin: 0;
+  color: #9ba7aa;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.settings-card {
+  margin-top: 28px;
+  padding: 22px;
+  border: 1px solid #283234;
+  border-radius: 11px;
+  background: #171f21;
+}
+
+.card-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #293234;
+}
+
+.app-symbol {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #33453f;
+  border-radius: 10px;
+  color: #8be1c1;
+  background: #1a2b26;
+  font-family: Manrope, sans-serif;
+  font-weight: 700;
+}
+
+h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.card-heading p {
+  margin: 4px 0 0;
+  color: #829095;
+  font-size: 10px;
+}
+
+.info-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px 2px 0;
+  color: #879497;
+  font-size: 11px;
+}
+
+.value {
+  color: #d4dfda;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #83dabc;
+}
+
+.status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #83dabc;
+}
+
+.error-state {
+  display: grid;
+  gap: 5px;
+  padding-top: 16px;
+  color: #e1a99e;
+  font-size: 11px;
+}
+
+.error-state span {
+  color: #9da7a7;
+  line-height: 1.6;
+}
+
+.privacy-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 17px;
+  border: 1px solid #273630;
+  border-radius: 10px;
+  color: #9eb2a9;
+  background: #151e1c;
+}
+
+.privacy-symbol {
+  color: #83dabc;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.privacy-card strong {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.privacy-card p {
+  margin: 5px 0 0;
+  color: #82918a;
+  font-size: 10px;
+  line-height: 1.6;
+}

@@ -1,0 +1,41 @@
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Main navigation">
+    <a class="brand" routerLink="/" aria-label="TeachMyPC home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none"><path d="M6 10.5 16 5l10 5.5v11L16 27 6 21.5v-11Z" stroke="currentColor" stroke-width="1.7"/><path d="M11 16h10M16 11v10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </span>
+      <span class="brand-copy"><strong>TeachMyPC</strong><small>Local automation</small></span>
+    </a>
+
+    <nav class="nav-list">
+      <span class="nav-label">Workspace</span>
+      <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <span class="nav-icon" aria-hidden="true">⌂</span><span>Dashboard</span>
+      </a>
+      <a class="nav-link" routerLink="/rules" routerLinkActive="active">
+        <span class="nav-icon" aria-hidden="true">◇</span><span>My Rules</span>
+      </a>
+      <a class="nav-link" routerLink="/activity" routerLinkActive="active">
+        <span class="nav-icon" aria-hidden="true">◷</span><span>Activity</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="privacy-note"><span class="privacy-dot"></span><span>Private by design<small>Runs on your Mac</small></span></div>
+      <a class="nav-link settings-link" routerLink="/settings" routerLinkActive="active">
+        <span class="nav-icon" aria-hidden="true">⚙</span><span>Settings</span>
+      </a>
+      <div class="sidebar-foot">Teach your computer once.<br />Let it handle the repetitive work.</div>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <header class="topbar">
+      <span class="topbar-context">Your workspace</span>
+      <span class="local-badge"><span></span> Local &amp; private</span>
+    </header>
+    <section class="page-content" aria-live="polite">
+      <router-outlet />
+    </section>
+  </main>
+</div>

@@ -1,0 +1,26 @@
+:root {
+  color-scheme: dark;
+  --color-canvas: #111719;
+  --color-sidebar: #101517;
+  --color-surface: #171f21;
+  --color-surface-raised: #1b2527;
+  --color-border: #252e31;
+  --color-text: #e9f0ed;
+  --color-muted: #8e9a9e;
+  --color-accent: #74dcba;
+  --color-accent-dark: #122d25;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }
+html { min-width: 320px; min-height: 100%; background: var(--color-canvas); }
+body { min-width: 320px; min-height: 100vh; margin: 0; }
+button, a { font: inherit; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+::selection { color: #10221c; background: #74dcba; }
