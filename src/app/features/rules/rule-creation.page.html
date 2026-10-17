@@ -1,38 +1,44 @@
 <main class="rule-page">
-  <header class="page-heading">
-    <span class="eyebrow"><span class="eyebrow-line"></span> RULE WORKSHOP</span>
-    <h1>Teach your Mac<br /><span>the little things.</span></h1>
-    <p>Describe a file task in your own words. We’ll turn it into a clear preview for you to review.</p>
-  </header>
+  <header class="page-heading"><span class="eyebrow"><span class="eyebrow-line"></span> RULE WORKSHOP</span><h1>Teach your Mac<br /><span>the little things.</span></h1><p>Describe a file task in your own words. Review and approve every detail before saving.</p></header>
   <section class="composer panel" aria-labelledby="instruction-heading">
     <div class="section-title"><span class="step">01</span><div><h2 id="instruction-heading">What should happen?</h2><p>English and Arabic are supported.</p></div></div>
-    <label class="sr-only" for="instruction">Describe your automation</label>
-    <textarea id="instruction" [ngModel]="instruction()" (ngModelChange)="instruction.set($event)" maxlength="2000" placeholder="When a new PDF is created, rename it with today’s date…"></textarea>
-    <div class="composer-foot"><span>{{ instruction().length }} / 2,000</span>
-      <button class="primary-action" type="button" [disabled]="!canGenerate()" (click)="generate()">
-        @if (interpreter.state().status === 'loading') { <span class="spinner" aria-hidden="true"></span><span>Interpreting…</span> }
-        @else { <span>Generate preview</span><span aria-hidden="true">↗</span> }
-      </button>
-    </div>
+    <label class="sr-only" for="instruction">Describe your automation</label><textarea id="instruction" [ngModel]="instruction()" (ngModelChange)="instruction.set($event)" maxlength="2000" placeholder="When a new PDF is created, rename it with today’s date…"></textarea>
+    <div class="composer-foot"><span>{{ instruction().length }} / 2,000</span><button class="primary-action" type="button" [disabled]="!canGenerate()" (click)="generate()">@if (interpreter.state().status === 'loading') { <span class="spinner"></span><span>Interpreting…</span> } @else { <span>Generate preview</span><span aria-hidden="true">↗</span> }</button></div>
     <div class="examples"><span>TRY AN EXAMPLE</span>@for (example of examples; track example) { <button type="button" (click)="useExample(example)">{{ example }}</button> }</div>
   </section>
   @if (interpreter.state(); as state) {
-    @if (state.status === 'error') {
-      <section class="notice error" role="alert"><span class="notice-icon">!</span><div><h2>Couldn’t generate a preview</h2><p>{{ state.message }}</p></div><button class="retry" (click)="generate()" [disabled]="!instruction().trim()">Retry</button></section>
-    }
-    @if (state.status === 'result') {
-      @if (state.result.status === 'supported' && state.result.rule; as rule) {
-        <section class="preview panel" aria-labelledby="preview-title">
-          <div class="preview-heading"><div><span class="step">02</span><span class="section-kicker">REVIEW YOUR PREVIEW</span><h2 id="preview-title">Here’s what I understood</h2></div><span class="status-pill">Ready to review</span></div>
-          <div class="trigger-row"><span class="icon">◷</span><div><small>WHEN</small><strong>A new file is created</strong><span>Trigger: file_created</span></div></div>
-          <div class="filter-row"><span class="icon">⌕</span><div><small>ONLY FOR</small><strong>{{ rule.trigger.extensions.length ? rule.trigger.extensions.join(', ') : 'All regular files' }}</strong></div></div>
-          <div class="actions"><small>THEN, IN THIS ORDER</small>@for (action of rule.actions; track $index) { <div class="action-row"><span class="action-number">{{ $index + 1 }}</span><div><strong>{{ actionLabel(action) }}</strong>@if (action.type === 'move' || action.type === 'copy') { <span class="folder-needed">Folder selection required in the next step</span> }</div></div> }</div>
-          <p class="preview-safety">This is a preview. No files have been changed.</p>
-        </section>
-      } @else if (state.result.status === 'needs_clarification') {
-        <section class="notice clarify"><span class="notice-icon">?</span><div><h2>A little more detail is needed</h2><p>{{ state.result.message }}</p><ul>@for (question of state.result.clarificationQuestions; track question) { <li>{{ question }}</li> }</ul></div></section>
-      } @else { <section class="notice unsupported"><span class="notice-icon">×</span><div><h2>That request isn’t supported yet</h2><p>{{ state.result.message }}</p></div></section> }
-    }
+    @if (state.status === 'error') { <section class="notice error" role="alert"><span class="notice-icon">!</span><div><h2>Couldn’t generate a preview</h2><p>{{ state.message }}</p></div><button class="retry" (click)="generate()" [disabled]="!instruction().trim()">Retry</button></section> }
+    @if (state.status === 'result' && state.result.status === 'needs_clarification') { <section class="notice clarify"><span class="notice-icon">?</span><div><h2>A little more detail is needed</h2><p>{{ state.result.message }}</p><ul>@for (question of state.result.clarificationQuestions; track question) { <li>{{ question }}</li> }</ul></div></section> }
+    @if (state.status === 'result' && state.result.status === 'unsupported') { <section class="notice unsupported"><span class="notice-icon">×</span><div><h2>That request isn’t supported yet</h2><p>{{ state.result.message }}</p></div></section> }
   }
-  <p class="scope-note"><span aria-hidden="true">⌁</span> Phase 2 supports file-created triggers with rename, move, and copy actions.</p>
+  @if (builderVisible()) {
+        <section class="preview panel" aria-labelledby="preview-title">
+          <div class="preview-heading"><div><span class="step">02</span><span class="section-kicker">REVIEW AND EDIT</span><h2 id="preview-title">Rule builder</h2></div><span class="status-pill">Draft · not running</span></div>
+          <label class="field-label">Rule title<input [ngModel]="title()" (ngModelChange)="setTitle($event)" maxlength="80" /></label>
+          <label class="field-label">File extensions, comma separated<input [ngModel]="extensions()" (ngModelChange)="extensions.set($event)" placeholder=".pdf, .docx (blank means all files)" /></label>
+          <div class="trigger-row"><span class="icon">◷</span><div><small>WHEN</small><strong>A new file is created</strong><span>Trigger: file_created</span></div></div>
+          <div class="folder-row"><div><small>SOURCE FOLDER TO MONITOR</small><strong>{{ sourceFolder()?.name ?? 'Choose an authorized folder' }}</strong></div><button class="secondary-action" type="button" (click)="pickSource()">Select folder</button></div>
+          <div class="actions"><small>THEN, IN THIS ORDER</small>
+            @for (action of actions(); track $index; let i = $index) {
+              <div class="action-editor"><div class="action-tools"><span class="action-number">{{ i + 1 }}</span><button type="button" (click)="moveAction(i, -1)" [disabled]="i === 0" aria-label="Move action up">↑</button><button type="button" (click)="moveAction(i, 1)" [disabled]="i === actions().length - 1" aria-label="Move action down">↓</button><button type="button" (click)="removeAction(i)" aria-label="Remove action">Remove</button></div>
+                <select [ngModel]="action.type" (ngModelChange)="changeActionType(i, $event)"><option value="rename">Rename</option><option value="move">Move</option><option value="copy">Copy</option></select>
+                @if (action.type === 'rename') { <label class="field-label">Rename template<input [ngModel]="action.pattern" (ngModelChange)="updateAction(i, {pattern: $event})" placeholder="{date}-{originalName}" /><span>Supported placeholders: originalName and date. Original extension is preserved.</span></label> }
+                @else { <div class="destination"><span>{{ action.destinationLabel || 'Choose destination folder' }}</span><button class="secondary-action" type="button" (click)="pickDestination(i)">Select destination</button></div> }
+              </div>
+            }
+            <div class="add-actions"><button type="button" (click)="addAction('rename')">+ Rename</button><button type="button" (click)="addAction('move')">+ Move</button><button type="button" (click)="addAction('copy')">+ Copy</button></div>
+          </div>
+          <div class="preview-safety">Saving stores this rule disabled. Enable it explicitly from My Rules after reviewing its authorized folders and actions.</div>
+          @if (error()) { <p class="inline-error" role="alert">{{ error() }}</p> }
+          <div class="save-row"><button class="primary-action" type="button" [disabled]="busy()" (click)="save()">{{ busy() ? 'Saving…' : editingId() ? 'Update rule' : 'Save disabled rule' }}</button></div>
+        </section>
+  }
+  @if (error() && interpreter.state().status !== 'result') { <p class="inline-error" role="alert">{{ error() }}</p> }
+  <section class="saved-rules panel" aria-labelledby="library-title"><div class="preview-heading library-heading"><div><span class="section-kicker">YOUR LIBRARY</span><h2 id="library-title">My Rules</h2></div><span class="status-pill rule-count">{{ store.rules().length }} saved</span></div>
+    @if (store.loading()) { <p class="muted">Loading saved rules…</p> } @else if (store.error()) { <p class="inline-error" role="alert">{{ store.error() }}</p> } @else if (!store.rules().length) { <p class="muted">No saved rules yet. Create a preview above to get started.</p> }
+    @for (saved of store.rules(); track saved.id) { <article class="saved-rule"><div class="saved-rule-copy"><h3 [title]="saved.title">{{ saved.title }}</h3><p class="saved-rule-meta">{{ saved.trigger.extensions.length ? saved.trigger.extensions.join(', ') : 'All regular files' }} <span aria-hidden="true">·</span> {{ actionSummary(saved.actions) }}</p>@if (!saved.enabled) { <span class="runtime-status stopped">Disabled</span> } @else if (store.runtimeError()) { <span class="runtime-status error" [title]="store.runtimeError()">Status unavailable</span> } @else { @let runtime = store.statusFor(saved.id); <span class="runtime-status" [class.running]="runtime?.status === 'Running'" [class.error]="runtime?.status === 'Error'" [class.starting]="!runtime || runtime.status === 'Starting'" [class.stopped]="runtime?.status === 'Stopped'">{{ runtime?.status ?? 'Starting' }}</span>@if (runtime?.status === 'Error' && runtime.error) { <p class="runtime-error" role="status">{{ runtime.error }}</p> } }</div><div class="saved-tools"><button type="button" (click)="toggle(saved)">{{ saved.enabled ? 'Disable' : 'Enable' }}</button><button type="button" (click)="dryRun(saved)" [disabled]="dryRunLoading()">Dry run</button><button type="button" (click)="edit(saved)" [attr.aria-label]="'Edit ' + saved.title">Edit</button><button type="button" (click)="delete(saved)" [attr.aria-label]="'Delete ' + saved.title">Delete</button></div>
+      @if (dryRunRuleId() === saved.id) { <section class="dry-run-preview" aria-live="polite" aria-label="Dry Run preview"><div class="dry-run-heading"><h4>Dry Run · {{ saved.title }}</h4><button type="button" (click)="dryRunRuleId.set('')" [disabled]="dryRunLoading()">Close</button></div><p class="dry-run-safety">Preview only. No files will be modified.</p>@if (dryRunLoading()) { <p role="status">Opening the sample-file picker…</p> } @if (dryRunError()) { <p class="inline-error" role="alert">{{ dryRunError() }}</p> } @if (dryRunResult(); as result) { <p><strong>Original file:</strong> {{ result.sourceFilename }}</p><p><strong>Rule filter:</strong> {{ saved.trigger.extensions.length ? saved.trigger.extensions.join(', ') : 'All regular files' }}</p>@if (!result.matchesRule) { <p role="status">{{ result.message }}</p> } @else { @if (result.actions.length) { <ol>@for (action of result.actions; track $index) { <li>{{ action }}</li> }</ol> } @else if (!result.errors.length && !result.collisions.length) { <p>No operations are planned for this file.</p> } } @for (warning of result.collisions; track warning) { <p class="inline-error" role="alert">Collision warning: {{ warning }}</p> } @for (message of result.errors; track message) { <p class="inline-error" role="alert">{{ message }}</p> } }</section> }
+    </article> }
+  </section>
+  <p class="scope-note"><span aria-hidden="true">⌁</span> Rules and activity are stored locally. Only explicitly enabled rules monitor authorized folders.</p>
 </main>

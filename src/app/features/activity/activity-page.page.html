@@ -1,0 +1,30 @@
+<main class="activity-page">
+  <header class="page-heading">
+    <span class="eyebrow">LOCAL AUTOMATION HISTORY</span>
+    <h1>Activity</h1>
+    <p>Recent actions performed by your enabled rules.</p>
+  </header>
+
+  @if (store.activityError()) {
+    <p class="activity-error" role="alert">Could not load activity: {{ store.activityError() }}</p>
+  } @else if (store.activityLoading() && !store.activities().length) {
+    <p class="activity-empty">Loading recent activity…</p>
+  } @else if (!store.activities().length) {
+    <section class="activity-empty"><h2>No activity yet</h2><p>When an enabled rule processes a new file, its result will appear here.</p></section>
+  } @else {
+    <section class="activity-list" aria-label="Recent automation activity">
+      @for (record of store.activities(); track $index) {
+        <article class="activity-item">
+          <div class="activity-heading">
+            <span class="activity-state" [class.success]="record.status === 'success'" [class.skipped]="record.status === 'skipped'" [class.failed]="record.status === 'failed'">{{ record.status }}</span>
+            <time>{{ record.timestamp * 1000 | date:'medium' }}</time>
+          </div>
+          <h2>{{ record.sourceFilename }}</h2>
+          <p class="activity-rule">{{ ruleTitle(record.ruleId) }}</p>
+          <p class="activity-actions">{{ actions(record) || 'No actions completed' }}</p>
+          @if (record.error) { <p class="activity-error">{{ record.error }}</p> }
+        </article>
+      }
+    </section>
+  }
+</main>

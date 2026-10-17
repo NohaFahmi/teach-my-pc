@@ -9,8 +9,18 @@ const SYSTEM_PROMPT: &str = include_str!("../prompts/rule_interpreter_v2.txt");
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct ProposedRule {
+    #[serde(default, deserialize_with = "deserialize_optional_title")]
+    pub title: Option<String>,
     pub trigger: RuleTrigger,
     pub actions: Vec<RuleAction>,
+}
+
+fn deserialize_optional_title<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    Ok(value.as_str().map(str::to_owned))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -308,7 +318,213 @@ fn parse_and_validate(raw: &str, instruction: &str) -> Result<InterpretationResu
             }
         })?;
     validate_result(&result, instruction)?;
+    let mut result = result;
+    if let Some(rule) = result.rule.as_mut() {
+        rule.title = Some(normalize_title(rule.title.as_deref(), instruction, rule));
+    }
     Ok(result)
+}
+
+fn normalize_title(candidate: Option<&str>, instruction: &str, rule: &ProposedRule) -> String {
+    let normalized = candidate
+        .unwrap_or_default()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    let word_count = normalized.split_whitespace().count();
+    let arabic = instruction
+        .chars()
+        .any(|character| ('\u{0600}'..='\u{06ff}').contains(&character));
+    let generic = normalized.eq_ignore_ascii_case("new file rule")
+        || normalized.eq_ignore_ascii_case("automation rule")
+        || normalized.eq_ignore_ascii_case("new automation");
+    let has_control = normalized.chars().any(char::is_control);
+    let action_conflict = title_has_action_conflict(&normalized, rule);
+    let contains_arabic = normalized
+        .chars()
+        .any(|character| ('\u{0600}'..='\u{06ff}').contains(&character));
+    if (3..=7).contains(&word_count)
+        && normalized.chars().count() <= 80
+        && !generic
+        && !has_control
+        && !normalized.contains('/')
+        && !normalized.contains('\\')
+        && contains_arabic == arabic
+        && !action_conflict
+    {
+        return normalized;
+    }
+    fallback_title(arabic, rule)
+}
+
+fn title_has_action_conflict(title: &str, rule: &ProposedRule) -> bool {
+    let title = title.to_lowercase();
+    let has_move = rule
+        .actions
+        .iter()
+        .any(|a| matches!(a, RuleAction::Move { .. }));
+    let has_copy = rule
+        .actions
+        .iter()
+        .any(|a| matches!(a, RuleAction::Copy { .. }));
+    let has_rename = rule
+        .actions
+        .iter()
+        .any(|a| matches!(a, RuleAction::Rename { .. }));
+    let unsupported_action = [
+        "delete",
+        "remove",
+        "email",
+        "send",
+        "upload",
+        "launch",
+        "print",
+        "compress",
+        "extract",
+        "share",
+        "sync",
+        "encrypt",
+        "automate",
+        "automation",
+        "حذف",
+        "إرسال",
+        "رفع",
+        "طباعة",
+    ]
+    .iter()
+    .any(|word| title.contains(word));
+    let destinations: Vec<&str> = rule
+        .actions
+        .iter()
+        .filter_map(|action| match action {
+            RuleAction::Move { destination, .. } | RuleAction::Copy { destination, .. } => {
+                Some(destination.as_str())
+            }
+            RuleAction::Rename { .. } => None,
+        })
+        .collect();
+    let claims_destination = [" to ", " in ", " into ", " إلى ", " في "]
+        .iter()
+        .any(|word| title.contains(word));
+    let ungrounded_destination = claims_destination
+        && !destinations
+            .iter()
+            .any(|destination| title.contains(&destination.to_lowercase()));
+    unsupported_action
+        || ungrounded_destination
+        || (!has_move
+            && ["organize", "move", "sort", "تنظيم", "نقل"]
+                .iter()
+                .any(|word| title.contains(word)))
+        || (!has_copy
+            && ["copy", "backup", "back up", "نسخ"]
+                .iter()
+                .any(|word| title.contains(word)))
+        || (!has_rename
+            && ["rename", "date-stamp", "تسمية", "إعادة تسمية"]
+                .iter()
+                .any(|word| title.contains(word)))
+}
+
+fn fallback_title(arabic: bool, rule: &ProposedRule) -> String {
+    let extension = rule
+        .trigger
+        .extensions
+        .first()
+        .map(|value| value.trim_start_matches('.').to_ascii_uppercase());
+    let is_image = extension
+        .as_deref()
+        .is_some_and(|value| matches!(value, "PNG" | "JPG" | "JPEG"));
+    let extension_label = extension.as_deref();
+    let destination = rule.actions.iter().find_map(|action| match action {
+        RuleAction::Move { destination, .. } | RuleAction::Copy { destination, .. } => {
+            Some(destination.as_str())
+        }
+        RuleAction::Rename { .. } => None,
+    });
+    let date_rename = rule.actions.iter().any(
+        |action| matches!(action, RuleAction::Rename { pattern } if pattern.contains("{date}")),
+    );
+    let action = rule.actions.first();
+    if arabic {
+        return match action {
+            Some(RuleAction::Move { .. }) => format!(
+                "{}{}",
+                extension_label.map_or_else(
+                    || "تنظيم الملفات".to_owned(),
+                    |value| format!("تنظيم ملفات {value}")
+                ),
+                destination
+                    .map(|value| format!(" في {value}"))
+                    .unwrap_or_default()
+            ),
+            Some(RuleAction::Copy { .. }) => format!(
+                "{}{}",
+                extension_label.map_or_else(
+                    || "نسخ الملفات".to_owned(),
+                    |value| format!("نسخ ملفات {value}")
+                ),
+                destination
+                    .map(|value| format!(" إلى {value}"))
+                    .unwrap_or_default()
+            ),
+            Some(RuleAction::Rename { .. }) if date_rename => extension_label.map_or_else(
+                || "إعادة تسمية الملفات بالتاريخ".to_owned(),
+                |value| {
+                    format!(
+                        "إعادة تسمية {} {value} بالتاريخ",
+                        if is_image { "صور" } else { "ملفات" }
+                    )
+                },
+            ),
+            Some(RuleAction::Rename { .. }) => extension_label.map_or_else(
+                || "إعادة تسمية الملفات".to_owned(),
+                |value| {
+                    format!(
+                        "إعادة تسمية {} {value}",
+                        if is_image { "صور" } else { "ملفات" }
+                    )
+                },
+            ),
+            None => extension_label.map_or_else(
+                || "الملفات الجديدة".to_owned(),
+                |value| format!("ملفات {value} الجديدة"),
+            ),
+        };
+    }
+    let extension_plural = extension_label.map_or("Files".to_owned(), |value| format!("{value}s"));
+    let file_label = extension_label.map_or("Files".to_owned(), |value| format!("{value} Files"));
+    match action {
+        Some(RuleAction::Move { .. }) => format!(
+            "Organize {extension_plural}{}",
+            destination
+                .map(|value| format!(" in {value}"))
+                .unwrap_or_default()
+        ),
+        Some(RuleAction::Copy { .. }) => format!(
+            "Back Up {extension_plural}{}",
+            destination
+                .map(|value| format!(" to {value}"))
+                .unwrap_or_default()
+        ),
+        Some(RuleAction::Rename { .. }) if date_rename => {
+            if extension_label.is_some() {
+                format!("Date-Stamp {file_label}")
+            } else {
+                "Date-Stamp New Files".to_owned()
+            }
+        }
+        Some(RuleAction::Rename { .. }) => {
+            if extension_label.is_some() {
+                format!("Rename {file_label}")
+            } else {
+                "Rename New Files".to_owned()
+            }
+        }
+        None => {
+            extension_label.map_or("New Files".to_owned(), |value| format!("New {value} Files"))
+        }
+    }
 }
 
 fn safe_field_path(path: &str) -> String {
@@ -564,7 +780,8 @@ fn rule_schema() -> serde_json::Value {
       "type":"object","additionalProperties":false,"required":["status","rule","message","clarificationQuestions"],
       "properties":{
         "status":{"type":"string","enum":["supported","needs_clarification","unsupported"]},
-        "rule":{"anyOf":[{"type":"null"},{"type":"object","additionalProperties":false,"required":["trigger","actions"],"properties":{
+      "rule":{"anyOf":[{"type":"null"},{"type":"object","additionalProperties":false,"required":["trigger","actions"],"properties":{
+        "title":{"type":"string"},
           "trigger":{"type":"object","additionalProperties":false,"required":["type","extensions"],"properties":{"type":{"const":"file_created"},"extensions":{"type":"array","items":{"type":"string"}}}},
           "actions":{"type":"array","items":{"oneOf":[
             {"type":"object","additionalProperties":false,"required":["type","pattern"],"properties":{"type":{"const":"rename"},"pattern":{"type":"string"}}},
@@ -672,6 +889,74 @@ mod tests {
             r#"[{"type":"rename","pattern":"{date}-{originalName}"}]"#,
         );
         assert!(run("Rename every new PNG file using today's date", &json).is_ok());
+    }
+
+    #[test]
+    fn missing_and_invalid_titles_fall_back_without_rejecting_valid_rules() {
+        let move_rule = supported(
+            r#"[".pdf"]"#,
+            &format!("[{}]", move_action("move", "Documents")),
+        );
+        let parsed = run("Move new PDF files to my Documents folder", &move_rule).unwrap();
+        assert_eq!(
+            parsed.rule.unwrap().title.as_deref(),
+            Some("Organize PDFs in Documents")
+        );
+
+        let invalid = move_rule.replace("\"rule\":{", "\"rule\":{\"title\":\"New file rule\",");
+        let parsed = run("Move new PDF files to my Documents folder", &invalid).unwrap();
+        assert_eq!(
+            parsed.rule.unwrap().title.as_deref(),
+            Some("Organize PDFs in Documents")
+        );
+
+        let malformed_type = move_rule.replace("\"rule\":{", "\"rule\":{\"title\":42,");
+        let parsed = run("Move new PDF files to my Documents folder", &malformed_type).unwrap();
+        assert_eq!(
+            parsed.rule.unwrap().title.as_deref(),
+            Some("Organize PDFs in Documents")
+        );
+
+        let wrong_destination = move_rule.replace(
+            "\"rule\":{",
+            "\"rule\":{\"title\":\"Organize PDFs in Downloads\",",
+        );
+        let parsed = run(
+            "Move new PDF files to my Documents folder",
+            &wrong_destination,
+        )
+        .unwrap();
+        assert_eq!(
+            parsed.rule.unwrap().title.as_deref(),
+            Some("Organize PDFs in Documents")
+        );
+    }
+
+    #[test]
+    fn valid_english_and_arabic_titles_are_preserved_or_fallback_in_language() {
+        let english = supported(
+            r#"[".png"]"#,
+            r#"[{"type":"rename","pattern":"{date}-{originalName}"}]"#,
+        )
+        .replace(
+            "\"rule\":{",
+            "\"rule\":{\"title\":\"Date-Stamp PNG Files\",",
+        );
+        let parsed = run("Rename every new PNG file using today's date", &english).unwrap();
+        assert_eq!(
+            parsed.rule.unwrap().title.as_deref(),
+            Some("Date-Stamp PNG Files")
+        );
+
+        let arabic = supported(
+            r#"[".png"]"#,
+            r#"[{"type":"rename","pattern":"{date}-{originalName}"}]"#,
+        );
+        let parsed = run("لما أنزل صورة PNG غير اسمها بتاريخ النهارده", &arabic).unwrap();
+        assert_eq!(
+            parsed.rule.unwrap().title.as_deref(),
+            Some("إعادة تسمية صور PNG بالتاريخ")
+        );
     }
 
     #[test]

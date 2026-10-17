@@ -1,0 +1,110 @@
+.activity-page {
+  display: grid;
+  gap: 22px;
+}
+
+.page-heading {
+  display: grid;
+  gap: 9px;
+}
+
+.eyebrow {
+  color: #8ea19b;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .17em;
+}
+
+h1, h2, p {
+  margin: 0;
+}
+
+h1 {
+  font-family: Manrope, 'DM Sans', sans-serif;
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 500;
+  letter-spacing: -.06em;
+}
+
+.page-heading p, .activity-rule, .activity-actions {
+  color: #9ba7aa;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.activity-list {
+  display: grid;
+  border-top: 1px solid #293533;
+}
+
+.activity-item {
+  display: grid;
+  gap: 7px;
+  padding: 17px 0;
+  border-bottom: 1px solid #293533;
+}
+
+.activity-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: #81908b;
+  font-size: 10px;
+}
+
+.activity-heading time {
+  text-align: right;
+}
+
+.activity-state {
+  padding: 3px 8px;
+  border: 1px solid #414a48;
+  border-radius: 999px;
+  color: #c1cac6;
+  text-transform: capitalize;
+}
+
+.activity-state.success {
+  border-color: #376c55;
+  color: #9be2c0;
+}
+
+.activity-state.skipped {
+  border-color: #6b5a34;
+  color: #e3c47e;
+}
+
+.activity-state.failed, .activity-error {
+  color: #f0a49f;
+}
+
+.activity-item h2 {
+  color: #e6efea;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.activity-error {
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.activity-empty {
+  padding: 24px;
+  border: 1px solid #283234;
+  border-radius: 10px;
+  color: #9ba7aa;
+}
+
+.activity-empty h2 {
+  color: #e6efea;
+  font-size: 16px;
+}
+
+.activity-empty p {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.7;
+}

@@ -18,9 +18,32 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-* { box-sizing: border-box; }
-html { min-width: 320px; min-height: 100%; background: var(--color-canvas); }
-body { min-width: 320px; min-height: 100vh; margin: 0; }
-button, a { font: inherit; }
-button:focus-visible, a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
-::selection { color: #10221c; background: #74dcba; }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--color-canvas);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button, a {
+  font: inherit;
+}
+
+button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+::selection {
+  color: #10221c;
+  background: #74dcba;
+}
