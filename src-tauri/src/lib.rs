@@ -13,6 +13,66 @@ fn get_app_info() -> AppInfo {
     }
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalAiStatus {
+    endpoint: &'static str,
+    model: &'static str,
+    connected: bool,
+    model_available: bool,
+}
+
+fn local_ai_model_available(tags: &serde_json::Value, model: &str) -> bool {
+    tags.get("models")
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(|models| {
+            models.iter().any(|entry| {
+                entry
+                    .get("name")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|name| name == model || name.starts_with(&format!("{model}:")))
+            })
+        })
+}
+
+#[tauri::command]
+fn get_local_ai_status() -> LocalAiStatus {
+    let tags = reqwest::blocking::Client::builder()
+        .connect_timeout(std::time::Duration::from_millis(700))
+        .timeout(std::time::Duration::from_millis(1200))
+        .build()
+        .ok()
+        .and_then(|client| client.get("http://127.0.0.1:11434/api/tags").send().ok())
+        .filter(|response| response.status().is_success())
+        .and_then(|response| response.json::<serde_json::Value>().ok());
+    let connected = tags.is_some();
+    let model_available = tags
+        .as_ref()
+        .is_some_and(|tags| local_ai_model_available(tags, "gemma3:4b"));
+    LocalAiStatus {
+        endpoint: "http://127.0.0.1:11434",
+        model: "gemma3:4b",
+        connected,
+        model_available,
+    }
+}
+
+#[cfg(test)]
+mod local_ai_status_tests {
+    use super::local_ai_model_available;
+
+    #[test]
+    fn detects_configured_model_in_ollama_tags() {
+        let tags = serde_json::json!({"models": [{"name": "gemma3:4b"}, {"name": "llama3:8b"}]});
+        assert!(local_ai_model_available(&tags, "gemma3:4b"));
+        assert!(!local_ai_model_available(&tags, "mistral:7b"));
+        assert!(!local_ai_model_available(
+            &serde_json::json!({"models": []}),
+            "gemma3:4b"
+        ));
+    }
+}
+
 mod engine;
 mod interpreter;
 mod rules;
@@ -184,6 +244,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_app_info,
+            get_local_ai_status,
             interpret_instruction,
             list_rules,
             list_authorized_folders,

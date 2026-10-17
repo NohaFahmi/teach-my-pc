@@ -47,3 +47,15 @@ button:focus-visible, a:focus-visible {
   color: #10221c;
   background: #74dcba;
 }
+
+.rule-page .workflow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rule-page .workflow li { display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding: 10px 8px; border: 1px solid #293634; border-radius: 8px; color: #84928e; background: #171f20; font-size: 9px; line-height: 1.45; }
+.rule-page .workflow li > span { display: grid; width: 19px; height: 19px; flex: 0 0 19px; place-items: center; border: 1px solid #3b4945; border-radius: 50%; color: #a5b5ad; font-size: 9px; }
+.rule-page .workflow p { min-width: 0; overflow-wrap: anywhere; }
+.rule-page .workflow .current-step { border-color: #416d5b; color: #c4e6d7; background: #1a2824; }
+.rule-page .workflow .current-step > span { border-color: #74d9b6; color: #10221b; background: #83dfbd; }
+.rule-page .saved-tools button:first-child { border-color: #82e5c4; color: #10221b; background: #83dfbd; font-weight: 700; }
+.rule-page .saved-tools button:nth-child(2), .rule-page .saved-tools button:nth-child(3) { color: #b8c9c1; background: #1a2423; }
+.rule-page .saved-tools button:last-child { border-color: #3b3433; color: #9b8c89; background: transparent; }
+@media (max-width: 600px) { .rule-page .workflow { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rule-page .workflow li:last-child { grid-column: 1 / -1; } }
+@media (max-width: 420px) { .rule-page .workflow { grid-template-columns: 1fr; } .rule-page .workflow li:last-child { grid-column: auto; } }

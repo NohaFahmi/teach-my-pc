@@ -1,5 +1,6 @@
 <main class="rule-page">
   <header class="page-heading"><span class="eyebrow"><span class="eyebrow-line"></span> RULE WORKSHOP</span><h1>Teach your Mac<br /><span>the little things.</span></h1><p>Describe a file task in your own words. Review and approve every detail before saving.</p></header>
+  <ol class="workflow" aria-label="Rule creation steps">@for (step of workflowSteps; track step; let i = $index) { <li [class.current-step]="currentStep() === i" [attr.aria-current]="currentStep() === i ? 'step' : null"><span>{{ i + 1 }}</span><p>{{ step }}</p></li> }</ol>
   <section class="composer panel" aria-labelledby="instruction-heading">
     <div class="section-title"><span class="step">01</span><div><h2 id="instruction-heading">What should happen?</h2><p>English and Arabic are supported.</p></div></div>
     <label class="sr-only" for="instruction">Describe your automation</label><textarea id="instruction" [ngModel]="instruction()" (ngModelChange)="instruction.set($event)" maxlength="2000" placeholder="When a new PDF is created, rename it with today’s date…"></textarea>
@@ -17,7 +18,7 @@
           <label class="field-label">Rule title<input [ngModel]="title()" (ngModelChange)="setTitle($event)" maxlength="80" /></label>
           <label class="field-label">File extensions, comma separated<input [ngModel]="extensions()" (ngModelChange)="extensions.set($event)" placeholder=".pdf, .docx (blank means all files)" /></label>
           <div class="trigger-row"><span class="icon">◷</span><div><small>WHEN</small><strong>A new file is created</strong><span>Trigger: file_created</span></div></div>
-          <div class="folder-row"><div><small>SOURCE FOLDER TO MONITOR</small><strong>{{ sourceFolder()?.name ?? 'Choose an authorized folder' }}</strong></div><button class="secondary-action" type="button" (click)="pickSource()">Select folder</button></div>
+          <div class="folder-row"><div><small>SOURCE FOLDER TO MONITOR</small><strong>{{ sourceFolder()?.name ?? 'Choose an authorized folder' }}</strong><p>TeachMyPC can only watch folders you select here. This keeps access limited to the files you intend to automate.</p></div><button class="secondary-action" type="button" (click)="pickSource()">Select folder</button></div>
           <div class="actions"><small>THEN, IN THIS ORDER</small>
             @for (action of actions(); track $index; let i = $index) {
               <div class="action-editor"><div class="action-tools"><span class="action-number">{{ i + 1 }}</span><button type="button" (click)="moveAction(i, -1)" [disabled]="i === 0" aria-label="Move action up">↑</button><button type="button" (click)="moveAction(i, 1)" [disabled]="i === actions().length - 1" aria-label="Move action down">↓</button><button type="button" (click)="removeAction(i)" aria-label="Remove action">Remove</button></div>

@@ -15,5 +15,15 @@
       @case ('unavailable') { <div class="error-state" role="status"><strong>Desktop information unavailable</strong><span>{{ state.message }}</span></div> }
     }
   </section>
+  <section class="settings-card" aria-labelledby="ai-title">
+    <div class="card-heading"><div class="app-symbol" aria-hidden="true">◎</div><div><h2 id="ai-title">Local AI</h2><p>Ollama connection used for rule interpretation</p></div></div>
+    @let ai = appInfo.localAi();
+    <div class="info-line"><span>Endpoint</span><span class="value">{{ ai.endpoint ?? 'Local Ollama' }}</span></div>
+    <div class="info-line"><span>Model</span><span class="value">{{ ai.model ?? 'gemma3:4b' }}</span></div>
+    @if (ai.status === 'loading') { <div class="info-line"><span>Connection</span><span class="value">Checking local Ollama…</span></div> }
+    @else if (ai.status === 'available') { <div class="info-line"><span>Connection</span><span class="value status"><i></i> Connected</span></div> }
+    @else if (ai.status === 'model-unavailable') { <div class="error-state" role="status"><strong>Configured model unavailable</strong><span>{{ ai.message }}</span></div> }
+    @else { <div class="error-state" role="status"><strong>Ollama is unavailable</strong><span>{{ ai.message }}</span></div> }
+  </section>
   <section class="privacy-card"><span class="privacy-symbol" aria-hidden="true">◎</span><div><strong>Designed to stay local</strong><p>This foundation does not send your information to cloud services.</p></div></section>
 </div>

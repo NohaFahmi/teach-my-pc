@@ -91,6 +91,10 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.path-details { color: #84928e; font-size: 10px; }
+.path-details summary { width: fit-content; cursor: pointer; }
+.path-details code { display: block; max-width: 100%; margin-top: 6px; color: #aab9b3; overflow-wrap: anywhere; white-space: normal; }
+
 .activity-empty {
   padding: 24px;
   border: 1px solid #283234;

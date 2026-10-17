@@ -19,9 +19,10 @@
             <span class="activity-state" [class.success]="record.status === 'success'" [class.skipped]="record.status === 'skipped'" [class.failed]="record.status === 'failed'">{{ record.status }}</span>
             <time>{{ record.timestamp * 1000 | date:'medium' }}</time>
           </div>
-          <h2>{{ record.sourceFilename }}</h2>
           <p class="activity-rule">{{ ruleTitle(record.ruleId) }}</p>
-          <p class="activity-actions">{{ actions(record) || 'No actions completed' }}</p>
+          <h2>{{ record.sourceFilename }}</h2>
+          <p class="activity-actions">{{ activitySummary(record) || 'No actions completed' }}</p>
+          @if (record.resultingPath) { <details class="path-details"><summary>Full destination path</summary><code [title]="record.resultingPath">{{ record.resultingPath }}</code></details> }
           @if (record.error) { <p class="activity-error">{{ record.error }}</p> }
         </article>
       }

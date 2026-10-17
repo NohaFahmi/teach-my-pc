@@ -26,6 +26,8 @@ npm run test -- --watch=false
 cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
+For the demo flow, disposable-folder setup, expected results, and troubleshooting, see [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md).
+
 Before starting the app, install Ollama and pull the model with `ollama pull gemma3:4b`. In My Rules, generate a proposal, select authorized source and destination folders with the native picker, review the actions, then save. Saved rules start disabled. Use Enable to confirm and activate a rule; Disable stops it. Dry run asks for a sample file path and previews the plan without changing files. Visit Activity to view recent persisted successes, skips, and failures. Malformed storage is preserved and reported instead of replaced.
 
-Rust unit tests use a mocked Ollama client. See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the opt-in real-model test, verification, and known limitations.
+The dashboard uses persisted rule and activity data; Settings shows the local Ollama health status. Rust unit tests use a mocked Ollama client. See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for verification and known limitations.

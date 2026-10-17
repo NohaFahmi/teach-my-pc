@@ -11,5 +11,6 @@ export class SettingsPagePage implements OnInit {
 
   ngOnInit(): void {
     void this.appInfo.load();
+    void this.appInfo.checkLocalAi();
   }
 }

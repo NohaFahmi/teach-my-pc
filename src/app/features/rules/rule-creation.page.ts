@@ -25,6 +25,8 @@ export class RuleCreationPage {
   readonly dryRunResult = signal<PlanPreview | null>(null);
   readonly dryRunError = signal('');
   readonly canGenerate = computed(() => this.instruction().trim().length > 0 && this.interpreter.state().status !== 'loading');
+  readonly workflowSteps = ['Describe automation', 'Interpret and review', 'Authorize folders', 'Save disabled', 'Dry run, then enable'];
+  readonly currentStep = computed(() => this.sourceFolder() ? 2 : this.builderVisible() ? 1 : 0);
   readonly examples = ['Rename new PDFs with today’s date and their original name.', 'Move new JPG files to my Photos folder.', 'لما ينزل ملف PDF جديد، انسخه إلى مجلد الفواتير'];
   constructor() {
     void this.store.load();

@@ -12,6 +12,7 @@ h1, h2, p {
   margin-bottom: 5px;
 }
 
+
 .eyebrow, .section-kicker {
   display: inline-flex;
   align-items: center;
@@ -154,7 +155,7 @@ textarea::placeholder {
   margin-top: 17px;
 }
 
-.examples > span, .actions > small, .trigger-row small, .filter-row small {
+.examples > span, .actions > small, .trigger-row small {
   color: #758681;
   font-size: 8px;
   font-weight: 700;
@@ -212,7 +213,7 @@ textarea::placeholder {
   font-size: 9px;
 }
 
-.trigger-row, .filter-row {
+.trigger-row {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -231,12 +232,12 @@ textarea::placeholder {
   background: #1c2a26;
 }
 
-.trigger-row div, .filter-row div {
+.trigger-row div {
   display: grid;
   gap: 4px;
 }
 
-.trigger-row strong, .filter-row strong, .action-row strong {
+.trigger-row strong {
   color: #dce6e1;
   font-size: 11px;
   font-weight: 550;
@@ -254,16 +255,6 @@ textarea::placeholder {
   border-top: 1px solid #293533;
 }
 
-.action-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  padding: 10px;
-  border: 1px solid #303b39;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, .015);
-}
-
 .action-number {
   display: grid;
   width: 20px;
@@ -273,16 +264,6 @@ textarea::placeholder {
   border-radius: 6px;
   color: #9de7ca;
   background: #1c3028;
-  font-size: 9px;
-}
-
-.action-row > div {
-  display: grid;
-  gap: 5px;
-}
-
-.folder-needed {
-  color: #e1c58d;
   font-size: 9px;
 }
 
@@ -452,4 +433,9 @@ textarea::placeholder {
   }
   .saved-rule { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .saved-tools { justify-content: flex-end; }
+}
+
+@media (max-width: 420px) {
+  .saved-tools { flex-wrap: wrap; justify-content: flex-start; }
+  .saved-tools button { flex: 1 1 72px; }
 }

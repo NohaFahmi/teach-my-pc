@@ -29,6 +29,22 @@ pub struct RuleRuntimeStatus {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExecutionDisposition {
+    Success,
+    TerminalSkip,
+    RetryableFailure,
+    PartialFailure,
+    TerminalFailure,
+}
+
+#[derive(Debug)]
+struct ExecutionResult {
+    disposition: ExecutionDisposition,
+    error: Option<String>,
+    completed_count: usize,
+}
+
 #[derive(Clone)]
 pub struct WatcherManager {
     statuses: Arc<Mutex<std::collections::HashMap<String, RuleRuntimeStatus>>>,
@@ -200,6 +216,20 @@ fn matches_extension(rule: &Rule, sample: &Path) -> bool {
 }
 
 pub fn execute(rule: &Rule, source: &Path, repo: &RuleRepository) -> Result<(), String> {
+    let result = execute_detailed(rule, source, repo);
+    result.error.map_or(Ok(()), Err)
+}
+
+fn execute_detailed(rule: &Rule, source: &Path, repo: &RuleRepository) -> ExecutionResult {
+    execute_detailed_with_hook(rule, source, repo, |_, _| {})
+}
+
+fn execute_detailed_with_hook(
+    rule: &Rule,
+    source: &Path,
+    repo: &RuleRepository,
+    mut before_action: impl FnMut(usize, &Path),
+) -> ExecutionResult {
     if !rule.enabled {
         return record_outcome(
             rule,
@@ -208,6 +238,7 @@ pub fn execute(rule: &Rule, source: &Path, repo: &RuleRepository) -> Result<(), 
             vec![],
             None,
             "skipped",
+            ExecutionDisposition::TerminalSkip,
             Some("Rule is disabled".into()),
         );
     }
@@ -219,7 +250,21 @@ pub fn execute(rule: &Rule, source: &Path, repo: &RuleRepository) -> Result<(), 
             } else {
                 "failed"
             };
-            return record_outcome(rule, source, repo, vec![], None, status, Some(error));
+            let disposition = if status == "skipped" {
+                ExecutionDisposition::TerminalSkip
+            } else {
+                ExecutionDisposition::TerminalFailure
+            };
+            return record_outcome(
+                rule,
+                source,
+                repo,
+                vec![],
+                None,
+                status,
+                disposition,
+                Some(error),
+            );
         }
     };
     let mut current = match source.canonicalize() {
@@ -232,13 +277,15 @@ pub fn execute(rule: &Rule, source: &Path, repo: &RuleRepository) -> Result<(), 
                 vec![],
                 None,
                 "failed",
+                ExecutionDisposition::RetryableFailure,
                 Some("Source file is unavailable".into()),
             );
         }
     };
     let mut completed = Vec::new();
     let mut final_error = None;
-    for ((label, target), action) in planned.iter().zip(&rule.actions) {
+    for (index, ((label, target), action)) in planned.iter().zip(&rule.actions).enumerate() {
+        before_action(index, target);
         let result = match action {
             Action::Rename { .. } | Action::Move { .. } => {
                 if let (Ok(a), Ok(b)) = (
@@ -250,7 +297,7 @@ pub fn execute(rule: &Rule, source: &Path, repo: &RuleRepository) -> Result<(), 
                     {
                         Err("Move across filesystem volumes is unsupported".to_owned())
                     } else {
-                        fs::rename(&current, target).map_err(|_| "Move failed".to_owned())
+                        rename_no_replace(&current, target)
                     }
                 } else {
                     Err("Source or destination is inaccessible".to_owned())
@@ -269,20 +316,44 @@ pub fn execute(rule: &Rule, source: &Path, repo: &RuleRepository) -> Result<(), 
             }
         }
     }
-    let status = if final_error.is_some() {
-        "failed"
-    } else {
-        "success"
+    let disposition = execution_disposition(completed.len(), final_error.as_deref());
+    let status = match disposition {
+        ExecutionDisposition::Success => "success",
+        ExecutionDisposition::TerminalSkip => "skipped",
+        ExecutionDisposition::PartialFailure => "partial_failure",
+        ExecutionDisposition::RetryableFailure | ExecutionDisposition::TerminalFailure => "failed",
     };
-    record_outcome(
+    let completed_count = completed.len();
+    let mut result = record_outcome(
         rule,
         source,
         repo,
         completed,
         Some(current),
         status,
+        disposition,
         final_error,
-    )
+    );
+    result.completed_count = completed_count;
+    result
+}
+
+fn execution_disposition(completed_count: usize, error: Option<&str>) -> ExecutionDisposition {
+    if error.is_some() && completed_count > 0 {
+        ExecutionDisposition::PartialFailure
+    } else if error.is_some_and(|error| error.contains("Destination already exists")) {
+        ExecutionDisposition::TerminalSkip
+    } else if error.is_some_and(|error| {
+        error.starts_with("Temporary filesystem failure:")
+            || error == "Source file is unavailable"
+            || error == "Source or destination is inaccessible"
+    }) {
+        ExecutionDisposition::RetryableFailure
+    } else if error.is_some() {
+        ExecutionDisposition::TerminalFailure
+    } else {
+        ExecutionDisposition::Success
+    }
 }
 
 fn record_outcome(
@@ -292,8 +363,10 @@ fn record_outcome(
     completed_actions: Vec<String>,
     resulting_path: Option<PathBuf>,
     status: &str,
+    disposition: ExecutionDisposition,
     error: Option<String>,
-) -> Result<(), String> {
+) -> ExecutionResult {
+    let completed_count = completed_actions.len();
     let intended_actions = rule.actions.iter().map(action_label).collect();
     let record = ActivityRecord {
         rule_id: rule.id.clone(),
@@ -311,12 +384,113 @@ fn record_outcome(
         error: error.clone(),
     };
     let storage_result = repo.record_activity(record);
-    if let Some(error) = error {
-        return Err(error);
+    let storage_error = storage_result
+        .err()
+        .map(|storage_error| format!("Activity could not be saved: {storage_error}"));
+    let storage_failed = storage_error.is_some();
+    let final_error = match (error, storage_error) {
+        (Some(execution_error), Some(storage_error)) => {
+            Some(format!("{execution_error}; {storage_error}"))
+        }
+        (Some(error), None) | (None, Some(error)) => Some(error),
+        (None, None) => None,
+    };
+    ExecutionResult {
+        disposition: if storage_failed {
+            ExecutionDisposition::TerminalFailure
+        } else {
+            disposition
+        },
+        error: final_error,
+        completed_count,
     }
-    storage_result.map_err(|storage_error| {
-        format!("Execution completed, but activity could not be saved: {storage_error}")
-    })
+}
+
+#[cfg(target_os = "macos")]
+fn rename_no_replace(source: &Path, destination: &Path) -> Result<(), String> {
+    use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    let source = CString::new(source.as_os_str().as_bytes())
+        .map_err(|_| "Invalid source path".to_owned())?;
+    let destination = CString::new(destination.as_os_str().as_bytes())
+        .map_err(|_| "Invalid destination path".to_owned())?;
+    // renameatx_np with RENAME_EXCL atomically refuses an existing destination.
+    unsafe extern "C" {
+        fn renameatx_np(
+            fromfd: libc::c_int,
+            from: *const libc::c_char,
+            tofd: libc::c_int,
+            to: *const libc::c_char,
+            flags: libc::c_uint,
+        ) -> libc::c_int;
+    }
+    let result = unsafe {
+        renameatx_np(
+            libc::AT_FDCWD,
+            source.as_ptr(),
+            libc::AT_FDCWD,
+            destination.as_ptr(),
+            0x00000004,
+        )
+    };
+    if result == 0 {
+        Ok(())
+    } else {
+        let error = std::io::Error::last_os_error();
+        if error.raw_os_error() == Some(libc::EEXIST) {
+            Err("Destination already exists".into())
+        } else if matches!(
+            error.raw_os_error(),
+            Some(libc::EACCES)
+                | Some(libc::EBUSY)
+                | Some(libc::EIO)
+                | Some(libc::ENOSPC)
+                | Some(libc::EMFILE)
+                | Some(libc::ENFILE)
+        ) {
+            Err(format!("Temporary filesystem failure: {error}"))
+        } else {
+            Err("Move failed".into())
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn rename_no_replace(source: &Path, destination: &Path) -> Result<(), String> {
+    use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    let source = CString::new(source.as_os_str().as_bytes())
+        .map_err(|_| "Invalid source path".to_owned())?;
+    let destination = CString::new(destination.as_os_str().as_bytes())
+        .map_err(|_| "Invalid destination path".to_owned())?;
+    let result = unsafe {
+        libc::syscall(
+            libc::SYS_renameat2,
+            libc::AT_FDCWD,
+            source.as_ptr(),
+            libc::AT_FDCWD,
+            destination.as_ptr(),
+            1u32,
+        )
+    };
+    if result == 0 {
+        Ok(())
+    } else {
+        let error = std::io::Error::last_os_error();
+        if error.raw_os_error() == Some(libc::EEXIST) {
+            Err("Destination already exists".into())
+        } else if matches!(
+            error.raw_os_error(),
+            Some(libc::EACCES) | Some(libc::EBUSY) | Some(libc::EIO) | Some(libc::ENOSPC)
+        ) {
+            Err(format!("Temporary filesystem failure: {error}"))
+        } else {
+            Err("Move failed".into())
+        }
+    }
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+fn rename_no_replace(_: &Path, _: &Path) -> Result<(), String> {
+    Err("Atomic no-replace rename is unsupported on this platform".into())
 }
 
 fn action_label(action: &Action) -> String {
@@ -344,6 +518,8 @@ struct WatcherLoopState {
     stable: std::collections::HashMap<PathBuf, (u64, u8)>,
     processed_file_ids: std::collections::HashMap<String, std::collections::HashSet<(u64, u64)>>,
     seeded: std::collections::HashSet<String>,
+    retry_counts: std::collections::HashMap<(String, (u64, u64)), u8>,
+    last_errors: std::collections::HashMap<String, String>,
 }
 
 fn file_identity(metadata: &fs::Metadata) -> (u64, u64) {
@@ -355,6 +531,14 @@ fn poll_once(
     repo: &RuleRepository,
     state: &mut WatcherLoopState,
 ) -> std::collections::HashMap<String, RuleRuntimeStatus> {
+    poll_once_with(repo, state, execute_detailed)
+}
+
+fn poll_once_with(
+    repo: &RuleRepository,
+    state: &mut WatcherLoopState,
+    mut execute_file: impl FnMut(&Rule, &Path, &RuleRepository) -> ExecutionResult,
+) -> std::collections::HashMap<String, RuleRuntimeStatus> {
     let mut next_statuses = std::collections::HashMap::new();
     if let Ok(rules) = repo.list() {
         let active: std::collections::HashSet<String> = rules
@@ -365,6 +549,8 @@ fn poll_once(
         state.known.retain(|id, _| active.contains(id));
         state.seeded.retain(|id| active.contains(id));
         state.processed_file_ids.retain(|id, _| active.contains(id));
+        state.last_errors.retain(|id, _| active.contains(id));
+        state.retry_counts.retain(|(id, _), _| active.contains(id));
         for rule in rules {
             if !rule.enabled {
                 next_statuses.insert(
@@ -413,8 +599,13 @@ fn poll_once(
                 rule.id.clone(),
                 RuleRuntimeStatus {
                     rule_id: rule.id.clone(),
-                    status: "Running".into(),
-                    error: None,
+                    status: if state.last_errors.contains_key(&rule.id) {
+                        "Error"
+                    } else {
+                        "Running"
+                    }
+                    .into(),
+                    error: state.last_errors.get(&rule.id).cloned(),
                 },
             );
             if state.seeded.insert(rule.id.clone()) {
@@ -469,13 +660,64 @@ fn poll_once(
                     *rounds = 0;
                 }
                 if *rounds >= 2 {
-                    let _ = execute(&rule, &path, &repo);
-                    processed.insert(identity);
-                    state.stable.remove(&key);
+                    let result = execute_file(&rule, &path, repo);
+                    match result.disposition {
+                        ExecutionDisposition::RetryableFailure if result.completed_count == 0 => {
+                            state.last_errors.insert(
+                                rule.id.clone(),
+                                result
+                                    .error
+                                    .clone()
+                                    .unwrap_or_else(|| "Temporary execution failure".into()),
+                            );
+                            let retry_key = (rule.id.clone(), identity);
+                            let attempts = state.retry_counts.entry(retry_key.clone()).or_default();
+                            if *attempts < 2 {
+                                *attempts += 1;
+                                state.stable.insert(key.clone(), (length, 2));
+                            } else {
+                                processed.insert(identity);
+                                state.retry_counts.remove(&retry_key);
+                                state.last_errors.insert(
+                                    rule.id.clone(),
+                                    result.error.unwrap_or_else(|| {
+                                        "Execution failed after bounded retries".into()
+                                    }),
+                                );
+                            }
+                        }
+                        disposition => {
+                            processed.insert(identity);
+                            state.stable.remove(&key);
+                            state.retry_counts.remove(&(rule.id.clone(), identity));
+                            if matches!(
+                                disposition,
+                                ExecutionDisposition::PartialFailure
+                                    | ExecutionDisposition::TerminalFailure
+                                    | ExecutionDisposition::RetryableFailure
+                            ) {
+                                state.last_errors.insert(
+                                    rule.id.clone(),
+                                    result.error.unwrap_or_else(|| "Execution failed".into()),
+                                );
+                            } else {
+                                state.last_errors.remove(&rule.id);
+                            }
+                        }
+                    }
                 }
             }
             if let Some(processed) = state.processed_file_ids.get_mut(&rule.id) {
                 processed.retain(|identity| present_identities.contains(identity));
+            }
+            if let Some(status) = next_statuses.get_mut(&rule.id) {
+                status.status = if state.last_errors.contains_key(&rule.id) {
+                    "Error"
+                } else {
+                    "Running"
+                }
+                .into();
+                status.error = state.last_errors.get(&rule.id).cloned();
             }
         }
     }
@@ -621,6 +863,198 @@ mod tests {
         execute(&rule, &sample, &repo).unwrap();
         assert!(!sample.exists());
         assert_eq!(repo.activity().unwrap()[0].status, "success");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn no_replace_rename_preserves_destination_and_source_on_collision() {
+        let (root, _repo, _rule, sample) = fixture();
+        let destination = root.join("source/occupied.pdf");
+        fs::write(&destination, "keep me").unwrap();
+        assert!(rename_no_replace(&sample, &destination).is_err());
+        assert_eq!(fs::read(&destination).unwrap(), b"keep me");
+        assert_eq!(fs::read(&sample).unwrap(), b"fixture");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn transient_and_partial_failures_have_distinct_non_retriable_policy() {
+        assert_eq!(
+            execution_disposition(0, Some("Temporary filesystem failure: busy")),
+            ExecutionDisposition::RetryableFailure
+        );
+        assert_eq!(
+            execution_disposition(1, Some("Move failed")),
+            ExecutionDisposition::PartialFailure
+        );
+        assert_eq!(
+            execution_disposition(0, Some("Move failed")),
+            ExecutionDisposition::TerminalFailure
+        );
+    }
+
+    #[test]
+    fn partial_multi_action_failure_is_recorded_and_not_retryable() {
+        let (root, repo, rule, sample) = fixture();
+        let result = execute_detailed_with_hook(&rule, &sample, &repo, |index, target| {
+            if index == 1 {
+                fs::write(target, "competing destination").unwrap();
+            }
+        });
+        assert_eq!(result.disposition, ExecutionDisposition::PartialFailure);
+        assert_eq!(result.completed_count, 1);
+        let records = repo.activity().unwrap();
+        assert_eq!(records[0].status, "partial_failure");
+        assert_eq!(records[0].completed_actions.len(), 1);
+        assert_eq!(
+            fs::read(records[0].resulting_path.as_ref().unwrap()).unwrap(),
+            b"fixture"
+        );
+        let destination = root
+            .join("dest")
+            .join(format!("{}-Invoice.PDF", Local::now().format("%Y-%m-%d")));
+        assert_eq!(fs::read(destination).unwrap(), b"competing destination");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn zero_action_filesystem_failure_is_recorded_as_retryable() {
+        let (root, repo, rule, sample) = fixture();
+        let result = execute_detailed_with_hook(&rule, &sample, &repo, |index, _| {
+            if index == 0 {
+                fs::remove_file(&sample).unwrap();
+            }
+        });
+        assert_eq!(result.disposition, ExecutionDisposition::RetryableFailure);
+        assert_eq!(result.completed_count, 0);
+        let record = repo.activity().unwrap().remove(0);
+        assert_eq!(record.status, "failed");
+        assert!(record.error.unwrap().contains("inaccessible"));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn destination_created_after_planning_is_not_overwritten() {
+        let (root, repo, mut rule, sample) = fixture();
+        rule.actions = vec![Action::Rename {
+            pattern: "occupied".into(),
+        }];
+        let planned_target = plan(&rule, &sample, &repo).unwrap()[0].1.clone();
+        let result = execute_detailed_with_hook(&rule, &sample, &repo, |index, target| {
+            assert_eq!(index, 0);
+            assert_eq!(target, planned_target);
+            fs::write(target, "created after planning").unwrap();
+        });
+        assert_eq!(result.disposition, ExecutionDisposition::TerminalSkip);
+        assert_eq!(repo.activity().unwrap()[0].status, "skipped");
+        assert_eq!(
+            fs::read(&planned_target).unwrap(),
+            b"created after planning"
+        );
+        assert!(sample.exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn watcher_records_terminal_collision_once_and_exposes_it_in_status() {
+        let (root, repo, mut rule, _sample) = fixture();
+        rule.actions = vec![Action::Rename {
+            pattern: "occupied".into(),
+        }];
+        rule.id.clear();
+        let saved = repo.save(rule).unwrap();
+        repo.set_enabled(&saved.id, true).unwrap();
+        let incoming = root.join("source/incoming.pdf");
+        fs::write(&incoming, "new").unwrap();
+        let mut state = WatcherLoopState::default();
+        poll_once(&repo, &mut state);
+        let target = root.join("source/occupied.pdf");
+        fs::write(&target, "preserve").unwrap();
+        for _ in 0..3 {
+            poll_once(&repo, &mut state);
+        }
+        let status = poll_once(&repo, &mut state).remove(&saved.id).unwrap();
+        assert!(incoming.is_file());
+        assert_eq!(fs::read(&target).unwrap(), b"preserve");
+        assert_eq!(repo.activity().unwrap().len(), 1);
+        assert_eq!(repo.activity().unwrap()[0].status, "skipped");
+        assert_eq!(status.status, "Running");
+        for _ in 0..4 {
+            poll_once(&repo, &mut state);
+        }
+        assert_eq!(repo.activity().unwrap().len(), 1);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    fn make_watcher_file_ready(repo: &RuleRepository, state: &mut WatcherLoopState, path: &Path) {
+        poll_once(repo, state); // seed existing files
+        fs::write(path, "new file").unwrap();
+        for _ in 0..2 {
+            poll_once(repo, state);
+        }
+    }
+
+    #[test]
+    fn watcher_retries_transient_failure_only_with_no_completed_actions() {
+        let (root, repo, mut rule, _) = fixture();
+        rule.id.clear();
+        rule.actions = vec![Action::Rename {
+            pattern: "renamed".into(),
+        }];
+        let saved = repo.save(rule).unwrap();
+        repo.set_enabled(&saved.id, true).unwrap();
+        let incoming = root.join("source/incoming.pdf");
+        let mut state = WatcherLoopState::default();
+        make_watcher_file_ready(&repo, &mut state, &incoming);
+        let identity = file_identity(&fs::metadata(&incoming).unwrap());
+        let mut attempts = 0;
+        for _ in 0..3 {
+            poll_once_with(&repo, &mut state, |_, _, _| {
+                attempts += 1;
+                ExecutionResult {
+                    disposition: ExecutionDisposition::RetryableFailure,
+                    error: Some("Temporary filesystem failure: busy".into()),
+                    completed_count: 0,
+                }
+            });
+        }
+        assert_eq!(attempts, 3); // initial attempt plus two bounded retries
+        assert!(state.processed_file_ids[&saved.id].contains(&identity));
+        assert_eq!(state.retry_counts.len(), 0);
+        assert!(state.last_errors.contains_key(&saved.id));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn watcher_does_not_retry_or_duplicate_partial_execution() {
+        let (root, repo, mut rule, _) = fixture();
+        rule.id.clear();
+        rule.actions = vec![Action::Rename {
+            pattern: "renamed".into(),
+        }];
+        let saved = repo.save(rule).unwrap();
+        repo.set_enabled(&saved.id, true).unwrap();
+        let incoming = root.join("source/incoming.pdf");
+        let mut state = WatcherLoopState::default();
+        make_watcher_file_ready(&repo, &mut state, &incoming);
+        let identity = file_identity(&fs::metadata(&incoming).unwrap());
+        let mut attempts = 0;
+        for _ in 0..4 {
+            let status = poll_once_with(&repo, &mut state, |_, _, _| {
+                attempts += 1;
+                ExecutionResult {
+                    disposition: ExecutionDisposition::PartialFailure,
+                    error: Some("Move failed after an earlier action".into()),
+                    completed_count: 1,
+                }
+            });
+            if attempts > 0 {
+                assert_eq!(status[&saved.id].status, "Error");
+            }
+        }
+        assert_eq!(attempts, 1);
+        assert!(state.processed_file_ids[&saved.id].contains(&identity));
+        assert!(state.last_errors[&saved.id].contains("earlier action"));
         fs::remove_dir_all(root).unwrap();
     }
 
