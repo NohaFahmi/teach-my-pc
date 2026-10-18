@@ -9,8 +9,7 @@
     "test": "ng test",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
-    "qa:walkthrough": "playwright test --config=playwright.config.ts"
+    "tauri:build": "tauri build"
   },
   "private": true,
   "packageManager": "npm@11.6.2",
