@@ -1,15 +1,22 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { FolderChoice, PlanPreview, ProposedRule, RuleAction, SavedAction, SavedRule } from '../../core/models/interpretation.model';
+import { Router } from '@angular/router';
+import { FolderChoice, ProposedRule, SavedAction, SavedRule } from '../../core/models/interpretation.model';
 import { RuleInterpreterService } from '../../core/services/rule-interpreter.service';
 import { RuleStoreService } from '../../core/services/rule-store.service';
 
 type DraftAction = { type: 'rename'; pattern: string } | { type: 'move' | 'copy'; destinationFolderId: string; destinationLabel: string };
-@Component({ selector: 'app-rule-creation-page', imports: [FormsModule], templateUrl: './rule-creation.page.html', styleUrl: './rule-creation.page.scss' })
+@Component({
+  selector: 'app-rule-creation-page',
+  imports: [FormsModule],
+  templateUrl: './rule-creation.page.html',
+  styleUrl: './rule-creation.page.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
 export class RuleCreationPage {
   readonly interpreter = inject(RuleInterpreterService);
   readonly store = inject(RuleStoreService);
-  private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
   readonly instruction = signal('');
   readonly title = signal('');
   readonly titleManuallyEdited = signal(false);
@@ -20,19 +27,17 @@ export class RuleCreationPage {
   readonly builderVisible = signal(false);
   readonly error = signal('');
   readonly busy = signal(false);
-  readonly dryRunRuleId = signal('');
-  readonly dryRunLoading = signal(false);
-  readonly dryRunResult = signal<PlanPreview | null>(null);
-  readonly dryRunError = signal('');
   readonly canGenerate = computed(() => this.instruction().trim().length > 0 && this.interpreter.state().status !== 'loading');
   readonly workflowSteps = ['Describe automation', 'Interpret and review', 'Authorize folders', 'Save disabled', 'Dry run, then enable'];
   readonly currentStep = computed(() => this.sourceFolder() ? 2 : this.builderVisible() ? 1 : 0);
   readonly examples = ['Rename new PDFs with today’s date and their original name.', 'Move new JPG files to my Photos folder.', 'لما ينزل ملف PDF جديد، انسخه إلى مجلد الفواتير'];
   constructor() {
-    void this.store.load();
-    void this.store.refreshRuntimeStatuses();
-    const refreshHandle = window.setInterval(() => void this.store.refreshRuntimeStatuses(), 1000);
-    this.destroyRef.onDestroy(() => window.clearInterval(refreshHandle));
+    const editRuleId = this.router.currentNavigation()?.extras.state?.['editRuleId'];
+    void this.store.load().then(() => {
+      if (typeof editRuleId !== 'string') return;
+      const rule = this.store.rules().find((saved) => saved.id === editRuleId);
+      if (rule) this.edit(rule);
+    });
   }
   async generate(): Promise<void> {
     await this.interpreter.interpret(this.instruction());
@@ -72,24 +77,6 @@ export class RuleCreationPage {
     this.actions.set(rule.actions.map((action) => action.type === 'rename' ? { ...action } : { ...action, destinationLabel: this.folderName(action.destinationFolderId) }));
     this.error.set(''); window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  async delete(rule: SavedRule): Promise<void> { if (!window.confirm(`Delete “${rule.title}”? This cannot be undone.`)) return; try { await this.store.delete(rule.id); } catch (error: unknown) { this.error.set(this.errorText(error)); } }
-  async toggle(rule: SavedRule): Promise<void> { const enabled = !rule.enabled; if (enabled && !window.confirm(`Enable “${rule.title}”? It will monitor ${this.folderName(rule.sourceFolderId)} and may rename, move, or copy new files.`)) return; try { await this.store.setEnabled(rule.id, enabled); } catch (error: unknown) { this.error.set(this.errorText(error)); } }
-  async dryRun(rule: SavedRule): Promise<void> {
-    this.dryRunRuleId.set(rule.id);
-    this.dryRunLoading.set(true);
-    this.dryRunError.set('');
-    try {
-      const path = await this.store.choosePreviewFile(rule.id);
-      if (!path) { this.dryRunRuleId.set(''); return; }
-      this.dryRunResult.set(await this.store.preview(rule.id, path));
-    } catch (error: unknown) {
-      this.dryRunError.set(this.errorText(error));
-    } finally {
-      this.dryRunLoading.set(false);
-    }
-  }
-  actionLabel(action: RuleAction): string { switch (action.type) { case 'rename': return 'Rename to ' + action.pattern + ' (keep original extension)'; case 'move': return 'Move to ' + action.destination; case 'copy': return 'Copy to ' + action.destination; } }
-  actionSummary(actions: SavedAction[]): string { return actions.map((action) => action.type === 'rename' ? 'Rename' : action.type === 'move' ? 'Move' : 'Copy').join(' → '); }
   folderName(id: string): string { return this.store.folders().find((folder) => folder.id === id)?.name ?? 'Authorized folder'; }
   private errorText(error: unknown): string { if (typeof error === 'string') return error; if (error instanceof Error) return error.message; if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') return error.message; return 'Unexpected backend error'; }
   private fallbackTitle(rule: ProposedRule): string {

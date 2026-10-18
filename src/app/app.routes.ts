@@ -5,12 +5,12 @@ import { RuleCreationPage } from './features/rules/rule-creation.page';
 import { ActivityPagePage } from './features/activity/activity-page.page';
 
 export const routes: Routes = [
-  { path: '', component: DashboardPagePage, title: 'Dashboard | TeachMyPC' },
+  { path: '', component: DashboardPagePage, title: 'Workbench | TeachMyPC' },
   {
     path: 'rules',
     component: RuleCreationPage,
-    title: 'My Rules | TeachMyPC',
-    data: { title: 'My Rules', description: 'Describe a file task and review its safe preview.' },
+    title: 'Create rule | TeachMyPC',
+    data: { title: 'Create rule', description: 'Describe a file task and review its safe preview.' },
   },
   {
     path: 'activity',

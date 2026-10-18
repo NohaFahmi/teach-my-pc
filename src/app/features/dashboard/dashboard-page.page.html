@@ -1,21 +1,172 @@
-<main class="dashboard-page">
-  <header class="welcome-row">
-    <div><span class="eyebrow">YOUR PERSONAL WORKSPACE</span><h1>Make room for<br><span>more important things.</span></h1><p class="intro">Teach your Mac how to handle the little things, with your approval at every step.</p><a class="primary-action" routerLink="/rules">Create Rule <span aria-hidden="true">↗</span></a></div>
-    <div class="hero-art" aria-hidden="true"><div class="hero-glow"></div><div class="hero-core">＋</div></div>
+<main class="workbench" aria-labelledby="workbench-title">
+  <header class="workbench-heading">
+    <div>
+      <span class="eyebrow">AUTOMATION WORKBENCH</span>
+      <h1 id="workbench-title">Rules</h1>
+      <p>Review and manage the automations you have approved.</p>
+    </div>
+    <a class="create-rule" routerLink="/rules">Create rule <span aria-hidden="true">↗</span></a>
   </header>
 
-  @if (store.loading() || store.activityLoading()) { <p class="loading" role="status">Loading your workspace…</p> }
-  @if (store.error() || store.activityError()) { <p class="error" role="alert">{{ store.error() || store.activityError() }}</p> }
-  <section class="metrics" aria-label="Workspace summary">
-    <article><span>Saved rules</span><strong>{{ store.rules().length }}</strong></article>
-    <article><span>Running now</span><strong>{{ runningCount() }}</strong></article>
-    <article><span>Disabled</span><strong>{{ disabledCount() }}</strong></article>
-    <article><span>Recent executions</span><strong>{{ store.activities().length }}</strong></article>
-  </section>
-  <section class="activity-panel" aria-labelledby="recent-title">
-    <div class="panel-heading"><div><span class="section-kicker">LOCAL HISTORY</span><h2 id="recent-title">Latest activity</h2></div><a routerLink="/activity">View all <span aria-hidden="true">↗</span></a></div>
-    @if (store.activityLoading() && !store.activities().length) { <p class="muted">Loading recent activity…</p> }
-    @else if (!store.activities().length) { <div class="empty-state"><h3>No activity yet</h3><p>Once an enabled rule handles a new file, its result will appear here.</p><a routerLink="/rules">Create your first rule</a></div> }
-    @else { @for (record of latestActivities(); track $index) { <article class="activity-row"><span class="activity-state" [class.success]="record.status === 'success'" [class.skipped]="record.status === 'skipped'" [class.failed]="record.status === 'failed'">{{ record.status }}</span><div class="activity-copy"><strong>{{ record.sourceFilename }}</strong><span>{{ activityTitle(record.ruleId) }} · {{ activitySummary(record) || 'No actions completed' }}</span>@if (record.error) { <span class="error-detail">{{ record.error }}</span> }</div><time>{{ record.timestamp * 1000 | date:'short' }}</time></article> } }
+  @if (store.error()) {
+    <section class="workspace-notice" role="alert">
+      <p>{{ store.error() }}</p>
+      <button type="button" (click)="store.load()">Retry</button>
+    </section>
+  }
+
+  <section class="workspace" aria-label="Saved automation rules">
+    <aside class="rule-browser" aria-labelledby="rule-list-title">
+      <header class="browser-heading">
+        <div>
+          <h2 id="rule-list-title">My rules</h2>
+          <p>{{ store.rules().length }} saved · {{ enabledCount() }} enabled</p>
+        </div>
+        <span class="running-summary" [attr.aria-label]="runningCount() + ' rules running'">
+          <span class="running-indicator" aria-hidden="true"></span>{{ runningCount() }} running
+        </span>
+      </header>
+
+      <div class="rule-list" role="listbox" aria-label="Saved rules">
+        @if (store.loading() && !store.rules().length) {
+          <p class="list-state" role="status">Loading saved rules…</p>
+        } @else if (!store.rules().length && store.error()) {
+          <p class="list-state">Rules could not be loaded. Retry to check again.</p>
+        } @else if (!store.rules().length) {
+          <div class="list-empty">
+            <span aria-hidden="true">⌘</span>
+            <strong>No rules yet</strong>
+            <p>Create a rule to start automating a file task.</p>
+            <a routerLink="/rules">Create your first rule</a>
+          </div>
+        } @else {
+          @for (rule of store.rules(); track rule.id; let i = $index) {
+            <button
+              class="workbench-rule"
+              type="button"
+              role="option"
+              [attr.aria-selected]="selectedRuleId() === rule.id"
+              [class.selected]="selectedRuleId() === rule.id"
+              (click)="selectRule(rule)"
+              (keydown)="navigateRuleList($event, i)">
+              <span class="rule-mark" aria-hidden="true">{{ rule.actions[0]?.type === 'rename' ? '↗' : rule.actions[0]?.type === 'copy' ? '⧉' : '⇢' }}</span>
+              <span class="rule-copy">
+                <span class="rule-name">{{ rule.title }}</span>
+                <span class="rule-source">{{ folderName(rule.sourceFolderId) }}</span>
+                <span class="rule-summary">{{ rule.trigger.extensions.length ? rule.trigger.extensions.join(', ') : 'All regular files' }} <span aria-hidden="true">·</span> {{ actionSummary(rule.actions) }}</span>
+              </span>
+              <span class="rule-status" [class.enabled]="rule.enabled" [class.disabled]="!rule.enabled" [class.is-error]="rule.enabled && (store.runtimeError() || store.statusFor(rule.id)?.status === 'Error')">
+                <span class="status-dot" aria-hidden="true"></span>
+                @if (!rule.enabled) { Disabled }
+                @else if (store.runtimeError()) { Status unavailable }
+                @else { {{ store.statusFor(rule.id)?.status ?? 'Starting' }} }
+              </span>
+            </button>
+          }
+        }
+      </div>
+    </aside>
+
+    <section class="inspector" aria-label="Selected rule details">
+      @if (selectedRule(); as rule) {
+        <header class="inspector-heading">
+          <div class="inspector-title">
+            <span class="eyebrow">RULE INSPECTOR</span>
+            <h2>{{ rule.title }}</h2>
+          </div>
+          <div class="state-cluster">
+            <span class="enabled-state" [class.is-enabled]="rule.enabled" [class.is-disabled]="!rule.enabled">
+              {{ rule.enabled ? 'Enabled' : 'Disabled' }}
+            </span>
+            @if (rule.enabled && store.runtimeError()) {
+              <span class="runtime-state is-error" [title]="store.runtimeError()">Status unavailable</span>
+            } @else if (rule.enabled) {
+              @let runtime = store.statusFor(rule.id);
+              <span class="runtime-state" [class.is-running]="runtime?.status === 'Running'" [class.is-error]="runtime?.status === 'Error'" [class.is-starting]="!runtime || runtime.status === 'Starting'">
+                <span class="status-dot" aria-hidden="true"></span>{{ runtime?.status ?? 'Starting' }}
+              </span>
+            } @else {
+              <span class="runtime-state">Not monitoring</span>
+            }
+          </div>
+        </header>
+
+        @if (rule.enabled && store.statusFor(rule.id)?.status === 'Error' && store.statusFor(rule.id)?.error) {
+          <p class="runtime-error" role="status">{{ store.statusFor(rule.id)?.error }}</p>
+        }
+        @if (rule.enabled && store.runtimeError()) {
+          <p class="runtime-error" role="status">{{ store.runtimeError() }}</p>
+        }
+        @if (operationError()) { <p class="operation-error" role="alert">{{ operationError() }}</p> }
+
+        <div class="inspector-content">
+          <section class="inspector-section folders-section" aria-labelledby="folders-title">
+            <h3 id="folders-title">Authorized folders</h3>
+            <div class="folder-card">
+              <span class="folder-icon" aria-hidden="true">▱</span>
+              <div><span class="field-label">WATCHING</span><strong>{{ folderName(rule.sourceFolderId) }}</strong></div>
+            </div>
+            @for (action of rule.actions; track $index) {
+              @if (action.type === 'move' || action.type === 'copy') {
+                <div class="folder-card destination-card">
+                  <span class="folder-icon" aria-hidden="true">{{ action.type === 'copy' ? '⧉' : '⇢' }}</span>
+                  <div><span class="field-label">{{ action.type === 'copy' ? 'COPY DESTINATION' : 'MOVE DESTINATION' }}</span><strong>{{ folderName(action.destinationFolderId) }}</strong></div>
+                </div>
+              }
+            }
+            <p class="path-note">Folder names are shown from the authorized folder list. Full paths are not available in the current desktop interface.</p>
+          </section>
+
+          <section class="inspector-section" aria-labelledby="trigger-title">
+            <h3 id="trigger-title">Trigger</h3>
+            <div class="trigger-detail">
+              <span class="trigger-symbol" aria-hidden="true">◷</span>
+              <div><strong>When a new file is created</strong><span>{{ rule.trigger.extensions.length ? rule.trigger.extensions.join(', ') : 'All regular files' }}</span></div>
+            </div>
+          </section>
+
+          <section class="inspector-section" aria-labelledby="actions-title">
+            <h3 id="actions-title">Actions <span>in order</span></h3>
+            <ol class="action-list">
+              @for (action of rule.actions; track $index) {
+                <li><span class="action-index">{{ $index + 1 }}</span><span class="action-kind">{{ actionName(action) }}</span><span class="action-description">{{ actionDescription(action) }}</span></li>
+              }
+            </ol>
+          </section>
+
+          <footer class="inspector-actions" aria-label="Rule actions">
+            <button class="action-button primary" type="button" (click)="toggle(rule)">{{ rule.enabled ? 'Disable rule' : 'Enable rule' }}</button>
+            <button class="action-button" type="button" (click)="dryRun(rule)" [disabled]="dryRunLoading()">Dry Run</button>
+            <button class="action-button" type="button" (click)="edit(rule)">Edit</button>
+            <button class="action-button danger" type="button" (click)="delete(rule)">Delete</button>
+          </footer>
+
+          @if (dryRunRuleId() === rule.id) {
+            <section class="dry-run-preview" aria-live="polite" aria-label="Dry Run preview">
+              <header><h3>Dry Run preview</h3><button type="button" (click)="dryRunRuleId.set('')" [disabled]="dryRunLoading()">Close</button></header>
+              <p class="dry-run-note">Preview only. No files will be modified.</p>
+              @if (dryRunLoading()) { <p role="status">Opening the sample-file picker…</p> }
+              @if (dryRunError()) { <p class="operation-error" role="alert">{{ dryRunError() }}</p> }
+              @if (dryRunResult(); as result) {
+                <p><strong>Original file:</strong> {{ result.sourceFilename }}</p>
+                @if (!result.matchesRule) { <p role="status">{{ result.message }}</p> }
+                @else if (result.actions.length) { <ol>@for (action of result.actions; track $index) { <li>{{ action }}</li> }</ol> }
+                @else if (!result.errors.length && !result.collisions.length) { <p>No operations are planned for this file.</p> }
+                @for (warning of result.collisions; track warning) { <p class="operation-error" role="alert">Collision warning: {{ warning }}</p> }
+                @for (message of result.errors; track message) { <p class="operation-error" role="alert">{{ message }}</p> }
+              }
+            </section>
+          }
+        </div>
+      } @else if (store.loading() && !store.rules().length) {
+        <div class="inspector-empty" role="status"><span aria-hidden="true">◌</span><h2>Loading your rules</h2><p>Fetching saved automations and their authorized folders.</p></div>
+      } @else if (!store.rules().length && store.error()) {
+        <div class="inspector-empty"><span aria-hidden="true">!</span><h2>Rules are unavailable</h2><p>Check the connection to the TeachMyPC desktop service, then retry.</p><button type="button" (click)="store.load()">Try again</button></div>
+      } @else if (!store.rules().length) {
+        <div class="inspector-empty"><span aria-hidden="true">＋</span><h2>Your workspace is ready</h2><p>Create a rule, review its preview, then enable it here when you are ready.</p><a routerLink="/rules">Create your first rule</a></div>
+      } @else {
+        <div class="inspector-empty"><span aria-hidden="true">⌘</span><h2>Select a rule</h2><p>Choose an automation from the list to inspect its folders, trigger, and actions.</p></div>
+      }
+    </section>
   </section>
 </main>

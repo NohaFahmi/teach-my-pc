@@ -343,18 +343,6 @@ textarea::placeholder {
   cursor: not-allowed;
 }
 
-.scope-note {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #697773;
-  font-size: 9px;
-}
-
-.scope-note span {
-  color: #8fc7ae;
-}
-
 .spinner {
   width: 12px;
   height: 12px;
@@ -368,36 +356,19 @@ textarea::placeholder {
 .field-label input, .action-editor select { min-height: 36px; padding: 8px 10px; border: 1px solid #344242; border-radius: 7px; outline: none; color: #e9f1ed; background: #111918; font: inherit; font-size: 11px; }
 .field-label input:focus, .action-editor select:focus { border-color: #74dcba; }
 .field-label span { color: #71807c; font-size: 9px; }
-.folder-row, .destination, .save-row, .action-tools, .saved-rule, .saved-tools, .add-actions { display: flex; align-items: center; gap: 9px; }
+.folder-row, .destination, .save-row, .action-tools, .add-actions { display: flex; align-items: center; gap: 9px; }
 .folder-row, .destination { justify-content: space-between; padding: 13px 0; border-top: 1px solid #293533; }
 .folder-row > div, .destination { color: #c5d2cc; font-size: 10px; }
 .folder-row small { display: block; margin-bottom: 5px; color: #758681; font-size: 8px; letter-spacing: .13em; }
-.secondary-action, .action-tools button, .saved-tools button, .add-actions button { padding: 7px 9px; border: 1px solid #344441; border-radius: 6px; color: #b8c9c1; background: #1a2423; font: inherit; font-size: 9px; cursor: pointer; }
-.secondary-action:hover, .saved-tools button:hover, .add-actions button:hover { border-color: #5d9d83; color: #b7f1dc; }
+.secondary-action, .action-tools button, .add-actions button { padding: 7px 9px; border: 1px solid #344441; border-radius: 6px; color: #b8c9c1; background: #1a2423; font: inherit; font-size: 9px; cursor: pointer; }
+.secondary-action:hover, .add-actions button:hover { border-color: #5d9d83; color: #b7f1dc; }
 .action-editor { display: grid; gap: 8px; padding: 11px; border: 1px solid #303b39; border-radius: 8px; }
 .action-tools { justify-content: flex-end; }
 .action-tools .action-number { margin-right: auto; }
 .action-tools button:disabled { opacity: .4; cursor: not-allowed; }
 .add-actions { margin-top: 3px; }
 .save-row { justify-content: flex-end; margin-top: 14px; }
-.saved-rules { padding: 22px; }
-.saved-rules .library-heading { align-items: flex-start; }
-.saved-rules .library-heading > div { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 5px; }
-.saved-rules .library-heading h2 { grid-column: 1; margin: 0; font-size: 17px; }
-.saved-rules .rule-count { margin-left: auto; flex: 0 0 auto; }
-.saved-rule { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 15px 0; border-top: 1px solid #293533; }
-.saved-rule-copy { min-width: 0; }
-.saved-rule h3 { margin: 0; color: #e6efea; font-size: 13px; font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; }
-.saved-rule .saved-rule-meta { margin: 5px 0 7px; color: #8a9993; font-size: 10px; line-height: 1.5; }
-.saved-rule-meta span { padding: 0 3px; color: #65736f; }
-.runtime-status { display: inline-flex; min-height: 20px; padding: 2px 8px; border: 1px solid #3c4845; border-radius: 999px; color: #b4c0bb; background: #202927; font-size: 9px; }
-.runtime-status.running { border-color: #376c55; color: #9be2c0; }
-.runtime-status.error, .runtime-error { color: #f0a49f; }
-.runtime-error { margin: 6px 0 0; font-size: 10px; overflow-wrap: anywhere; }
-.saved-tools { flex: 0 0 auto; }
-.saved-tools button { min-width: 54px; min-height: 32px; }
 .inline-error { margin: 10px 0; color: #f0a99c; font-size: 11px; }
-.scope-note { line-height: 1.5; }
 
 .sr-only {
   position: absolute;
@@ -419,7 +390,7 @@ textarea::placeholder {
 }
 
 @media (max-width: 600px) {
-  .composer, .preview, .saved-rules {
+  .composer, .preview {
     padding: 17px;
   }
   .examples {
@@ -431,11 +402,4 @@ textarea::placeholder {
   .status-pill {
     font-size: 8px;
   }
-  .saved-rule { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .saved-tools { justify-content: flex-end; }
-}
-
-@media (max-width: 420px) {
-  .saved-tools { flex-wrap: wrap; justify-content: flex-start; }
-  .saved-tools button { flex: 1 1 72px; }
 }
