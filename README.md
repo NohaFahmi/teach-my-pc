@@ -8,19 +8,19 @@ TeachMyPC is a macOS-first desktop MVP. Rule interpretation runs through Gemma 3
 
 ## App Preview
 
-Native macOS screenshots will be added here. The Workbench will be featured first, with the remaining views grouped below.
+The screenshots below are from the native macOS app. Two captures still need privacy-safe replacements before they can be shown here.
 
-**Workbench** — An overview of saved rules, their status, and the selected rule.
+**Workbench** — Review saved rules, their status, authorized folders, triggers, and actions.
 
-_Screenshot placeholder: `docs/screenshots/01-workbench.png`_
+![TeachMyPC Workbench showing saved rules and selected rule details](docs/screenshots/01-workbench.png)
 
 | Create Rule | Rule Details |
 | --- | --- |
-| **Create Rule** — Describe a task in natural language, review its interpretation, and choose authorized folders.<br><br>_Placeholder: `docs/screenshots/02-create-rule.png`_ | **Rule Details** — Review a saved rule’s folders, trigger, actions, and enable or disable it.<br><br>_Placeholder: `docs/screenshots/03-rule-details.png`_ |
+| ![Create Rule showing the interpreted PDF rename rule](docs/screenshots/02-create-rule.png)<br><sub>Describe a task, review its interpretation, and configure its actions.</sub> | ![Rule details showing authorized folders, trigger, actions, and controls](docs/screenshots/03-rule-details.png)<br><sub>Inspect a saved rule and choose when to enable or disable it.</sub> |
 
 | Dry Run | Activity |
 | --- | --- |
-| **Dry Run** — Preview the planned operation for a selected sample file.<br><br>_Placeholder: `docs/screenshots/04-dry-run.png`_ | **Activity** — Follow recorded automation outcomes and details.<br><br>_Placeholder: `docs/screenshots/05-activity.png`_ |
+| _Capture pending: `docs/screenshots/04-dry-run.png` shows a full personal filesystem path. Replace it with a redacted capture to preview the planned operation._ | _Capture pending: `docs/screenshots/05-activity.png` shows personal filesystem paths. Replace it with a redacted capture to show execution history._ |
 
 For the complete walkthrough and safe demo setup, see [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md).
 
