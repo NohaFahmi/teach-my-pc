@@ -8,7 +8,7 @@ TeachMyPC is a macOS-first desktop MVP. Rule interpretation runs through Gemma 3
 
 ## App Preview
 
-The screenshots below are from the native macOS app. Two captures still need privacy-safe replacements before they can be shown here.
+The screenshots below are from the native macOS app.
 
 **Workbench** — Review saved rules, their status, authorized folders, triggers, and actions.
 
@@ -20,7 +20,7 @@ The screenshots below are from the native macOS app. Two captures still need pri
 
 | Dry Run | Activity |
 | --- | --- |
-| _Capture pending: `docs/screenshots/04-dry-run.png` shows a full personal filesystem path. Replace it with a redacted capture to preview the planned operation._ | _Capture pending: `docs/screenshots/05-activity.png` shows personal filesystem paths. Replace it with a redacted capture to show execution history._ |
+| ![Dry Run preview for demo-invoice.pdf showing the planned move and preview-only status](docs/screenshots/04-dry-run.png)<br><sub>Preview the planned move for a sample PDF without modifying the file.</sub> | ![Activity timeline with completed file operations and their outcomes](docs/screenshots/05-activity.png)<br><sub>Review completed automations, resulting files, and recorded outcomes.</sub> |
 
 For the complete walkthrough and safe demo setup, see [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md).
 
