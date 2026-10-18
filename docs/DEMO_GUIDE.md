@@ -25,17 +25,17 @@ If the local model interprets a phrase differently, edit the proposed rule befor
 
 ## 90-second demonstration
 
-1. **0–10s:** Show the dashboard metrics and explain that rules start disabled.
+1. **0–10s:** Show Workbench and explain that rules start disabled.
 2. **10–25s:** Create a rule with the English example and generate its interpretation.
 3. **25–40s:** Review the title, extension, action, and choose `Incoming` as source and `Organized` as destination.
-4. **40–50s:** Save disabled, then show the rule in My Rules.
+4. **40–50s:** Save disabled, then show the rule in Workbench.
 5. **50–65s:** Run Dry Run against a disposable PDF and show that it previews without changing files.
 6. **65–80s:** Enable explicitly, add a new disposable PDF to `Incoming`, then show the persisted Activity record.
 7. **80–90s:** Disable the rule and point out the local Ollama status in Settings.
 
 ## Expected results
 
-The saved rule is disabled until explicitly enabled. Dry Run displays the planned move and does not modify files. Once enabled, a matching new regular file is moved to the authorized destination and the outcome appears in Activity. Dashboard counts come from saved rules, runtime statuses, and persisted activity; it shows no sample or fabricated records.
+The saved rule is disabled until explicitly enabled. Dry Run displays the planned move and does not modify files. Once enabled, a matching new regular file is moved to the authorized destination and the outcome appears in Activity. Workbench displays saved rules and their current enabled and runtime status.
 
 ## Troubleshooting
 
