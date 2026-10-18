@@ -12,6 +12,31 @@ h1, h2, p {
   margin-bottom: 5px;
 }
 
+.cancel-creation, .cancel-generation {
+  padding: 8px 10px;
+  border: 1px solid #394744;
+  border-radius: 7px;
+  color: #b4c1bc;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.cancel-creation:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.cancel-creation {
+  margin-top: 14px;
+}
+
+.cancel-creation:hover, .cancel-generation:hover {
+  border-color: #74dcba;
+  color: #b7f1dc;
+}
+
 
 .eyebrow, .section-kicker {
   display: inline-flex;
@@ -126,6 +151,18 @@ textarea::placeholder {
   margin-top: 11px;
   color: #71807c;
   font-size: 10px;
+}
+
+.generate-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancelled-status {
+  margin-top: 10px;
+  color: #9ba7aa;
+  font-size: 11px;
 }
 
 .primary-action {

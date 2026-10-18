@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
-import { SavedRule } from '../../core/models/interpretation.model';
+import { InterpretationResult, SavedRule } from '../../core/models/interpretation.model';
 import { RuleInterpreterService } from '../../core/services/rule-interpreter.service';
 import { RuleStoreService } from '../../core/services/rule-store.service';
 import { RuleCreationPage } from './rule-creation.page';
@@ -122,6 +122,54 @@ describe('RuleCreationPage', () => {
 
     expect(fixture.componentInstance.title()).toBe(savedRule.title);
     expect(fixture.componentInstance.titleManuallyEdited()).toBe(false);
+    fixture.destroy();
+  });
+
+  it('replaces draft actions when the user generates another interpretation', async () => {
+    const interpreter = TestBed.inject(RuleInterpreterService);
+    const results: InterpretationResult[] = [
+      {
+        status: 'supported',
+        rule: {
+          title: 'Rename then move PDFs',
+          trigger: { type: 'file_created', extensions: ['.pdf'] },
+          actions: [
+            { type: 'rename', pattern: '{date}-{originalName}' },
+            { type: 'move', destination: 'Archive', requiresFolderSelection: true },
+          ],
+        },
+        message: 'Rename and move PDFs',
+        clarificationQuestions: [],
+      },
+      {
+        status: 'supported',
+        rule: {
+          title: 'Copy PDFs to Backup',
+          trigger: { type: 'file_created', extensions: ['.pdf'] },
+          actions: [{ type: 'copy', destination: 'Backup', requiresFolderSelection: true }],
+        },
+        message: 'Copy PDFs to Backup',
+        clarificationQuestions: [],
+      },
+    ];
+    let resultIndex = 0;
+    vi.spyOn(interpreter, 'interpret').mockImplementation(async () => {
+      const result = results[resultIndex++];
+      if (result) interpreter.state.set({ status: 'result', result });
+    });
+    const fixture = TestBed.createComponent(RuleCreationPage);
+    const page = fixture.componentInstance;
+
+    page.instruction.set('Rename then move new PDFs');
+    await page.generate();
+    expect(page.actions()).toHaveLength(2);
+
+    page.instruction.set('Copy new PDFs to Backup');
+    await page.generate();
+
+    expect(page.actions()).toEqual([
+      { type: 'copy', destinationFolderId: '', destinationLabel: 'Backup' },
+    ]);
     fixture.destroy();
   });
 

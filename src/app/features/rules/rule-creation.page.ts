@@ -32,6 +32,7 @@ export class RuleCreationPage {
   readonly actions = signal<DraftAction[]>([]);
   readonly editingId = signal('');
   readonly builderVisible = signal(false);
+  readonly generationCancelled = signal(false);
   readonly error = signal('');
   readonly sourceFolderError = signal('');
   readonly busy = signal(false);
@@ -51,6 +52,7 @@ export class RuleCreationPage {
     'Move new JPG files to my Photos folder.',
     'لما ينزل ملف PDF جديد، انسخه إلى مجلد الفواتير',
   ];
+  private generationVersion = 0;
   constructor() {
     const editRuleId = this.router.currentNavigation()?.extras.state?.['editRuleId'];
     void this.store.load().then(() => {
@@ -60,7 +62,10 @@ export class RuleCreationPage {
     });
   }
   async generate(): Promise<void> {
+    const generationVersion = ++this.generationVersion;
+    this.generationCancelled.set(false);
     await this.interpreter.interpret(this.instruction());
+    if (generationVersion !== this.generationVersion) return;
     const state = this.interpreter.state();
     if (state.status === 'result' && state.result.status === 'supported' && state.result.rule) {
       const rule = state.result.rule;
@@ -79,6 +84,27 @@ export class RuleCreationPage {
       );
       this.error.set('');
     }
+  }
+  cancelGeneration(): void {
+    this.generationVersion++;
+    this.interpreter.cancel();
+    this.generationCancelled.set(true);
+  }
+  discardDraft(): void {
+    if (this.busy()) return;
+    this.generationVersion++;
+    this.interpreter.cancel();
+    this.instruction.set('');
+    this.title.set('');
+    this.titleManuallyEdited.set(false);
+    this.extensions.set('');
+    this.sourceFolder.set(null);
+    this.actions.set([]);
+    this.editingId.set('');
+    this.builderVisible.set(false);
+    this.generationCancelled.set(false);
+    this.error.set('');
+    this.sourceFolderError.set('');
   }
   useExample(example: string): void {
     this.instruction.set(example);

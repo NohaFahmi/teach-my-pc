@@ -11,20 +11,30 @@ export type InterpreterState =
 @Injectable({ providedIn: 'root' })
 export class RuleInterpreterService {
   readonly state = signal<InterpreterState>({ status: 'idle' });
+  private requestVersion = 0;
+
+  cancel(): void {
+    this.requestVersion++;
+    this.state.set({ status: 'idle' });
+  }
+
   async interpret(instruction: string): Promise<void> {
+    const requestVersion = ++this.requestVersion;
     this.state.set({ status: 'loading' });
     if (!isTauri()) {
-      this.state.set({
-        status: 'error',
-        message: 'Rule interpretation is available in the TeachMyPC desktop app.',
-      });
+      if (requestVersion === this.requestVersion)
+        this.state.set({
+          status: 'error',
+          message: 'Rule interpretation is available in the TeachMyPC desktop app.',
+        });
       return;
     }
     try {
       const result = await invoke<InterpretationResult>('interpret_instruction', { instruction });
-      this.state.set({ status: 'result', result });
+      if (requestVersion === this.requestVersion) this.state.set({ status: 'result', result });
     } catch (error: unknown) {
-      this.state.set({ status: 'error', message: this.errorMessage(error) });
+      if (requestVersion === this.requestVersion)
+        this.state.set({ status: 'error', message: this.errorMessage(error) });
     }
   }
   private errorMessage(error: unknown): string {
