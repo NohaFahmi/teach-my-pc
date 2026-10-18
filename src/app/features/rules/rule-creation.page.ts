@@ -63,7 +63,7 @@ export class RuleCreationPage {
   }
   async generate(): Promise<void> {
     const generationVersion = ++this.generationVersion;
-    this.generationCancelled.set(false);
+    this.clearDraftFields();
     await this.interpreter.interpret(this.instruction());
     if (generationVersion !== this.generationVersion) return;
     const state = this.interpreter.state();
@@ -95,6 +95,9 @@ export class RuleCreationPage {
     this.generationVersion++;
     this.interpreter.cancel();
     this.instruction.set('');
+    this.clearDraftFields();
+  }
+  private clearDraftFields(): void {
     this.title.set('');
     this.titleManuallyEdited.set(false);
     this.extensions.set('');
@@ -216,6 +219,9 @@ export class RuleCreationPage {
     this.busy.set(true);
     try {
       await this.store.save(rule);
+      this.generationVersion++;
+      this.interpreter.cancel();
+      this.instruction.set('');
       this.editingId.set('');
       this.title.set('');
       this.titleManuallyEdited.set(false);
@@ -223,6 +229,9 @@ export class RuleCreationPage {
       this.sourceFolder.set(null);
       this.actions.set([]);
       this.builderVisible.set(false);
+      this.generationCancelled.set(false);
+      this.error.set('');
+      this.sourceFolderError.set('');
     } catch (error: unknown) {
       this.error.set(this.errorText(error));
     } finally {

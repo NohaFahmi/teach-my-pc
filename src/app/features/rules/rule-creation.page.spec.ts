@@ -180,6 +180,10 @@ describe('RuleCreationPage', () => {
     const page = fixture.componentInstance;
     page.title.set('Draft title');
     page.setTitle('My edited title');
+    page.instruction.set('Move new PDFs to Archive');
+    page.editingId.set('old-rule-id');
+    page.builderVisible.set(true);
+    page.extensions.set('.pdf');
     page.sourceFolder.set({ id: 'source-id', name: 'Inbox' });
     page.actions.set([{ type: 'rename', pattern: '{originalName}' }]);
 
@@ -187,6 +191,14 @@ describe('RuleCreationPage', () => {
 
     expect(save.mock.calls[0][0].title).toBe('My edited title');
     expect(save.mock.calls[0][0].enabled).toBe(false);
+    expect(page.instruction()).toBe('');
+    expect(page.title()).toBe('');
+    expect(page.extensions()).toBe('');
+    expect(page.sourceFolder()).toBeNull();
+    expect(page.actions()).toEqual([]);
+    expect(page.editingId()).toBe('');
+    expect(page.builderVisible()).toBe(false);
+    expect(TestBed.inject(RuleInterpreterService).state()).toEqual({ status: 'idle' });
     fixture.destroy();
   });
 
