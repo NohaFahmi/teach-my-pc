@@ -61,7 +61,40 @@ The model proposes structured rule data. It does not get to perform file operati
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the frontend, Tauri, and Rust responsibilities and their data flow.
 
-## Getting started
+## Download the preview release
+
+Download the macOS DMG from the [TeachMyPC v0.1.0 GitHub Release](https://github.com/NohaFahmi/teach-my-pc/releases/tag/v0.1.0). Choose the artifact marked **Apple Silicon (arm64)**. This preview provides an arm64 build only; Intel Macs are not supported by this artifact. The app has been built on macOS 26.5 and has not been verified on older macOS versions.
+
+### Install on macOS
+
+1. Open the downloaded `.dmg` and drag **TeachMyPC** into **Applications**.
+2. Eject the mounted disk image, then open TeachMyPC from Applications.
+3. This preview is not signed with an Apple Developer ID and is not notarized. macOS may block the first launch. If so, Control-click the app in Applications, choose **Open**, then confirm **Open** in the dialog. If macOS still blocks it, use **System Settings → Privacy & Security → Open Anyway** after attempting to launch it. Only install builds downloaded from the project's GitHub Releases.
+
+### Set up Ollama
+
+Install [Ollama for macOS](https://ollama.com/download), open it, and install the required model in Terminal:
+
+```sh
+ollama pull gemma3:4b
+```
+
+TeachMyPC checks Ollama at `http://127.0.0.1:11434` and looks for `gemma3:4b`. Keep Ollama running while interpreting rules. In TeachMyPC, open **Settings** and confirm that the service and model are available before creating a rule.
+
+### First run
+
+Open **Create Rule**, describe one file task, and inspect the proposed trigger and actions. Choose the allowed folders using the folder picker, save the rule, then use **Dry Run** with a disposable sample file. Rules are saved disabled. Enable one only after reviewing the preview and confirming the prompt. See [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) for a safe walkthrough.
+
+### Supported platforms and release limitations
+
+- macOS on Apple Silicon (`aarch64` / `arm64`) is the only packaged and verified target for v0.1.0.
+- No Intel (`x86_64`) or universal DMG is included. A universal build requires both Rust macOS targets and a separate build verification.
+- No Windows or Linux packages are provided. Their native file-picker and automation behavior has not been validated.
+- This release has no Apple Developer ID signature and is not notarized. Gatekeeper may require the manual first-launch steps above, and the app may not open on managed Macs that prohibit apps without Developer ID signatures.
+- Ollama and `gemma3:4b` are separate prerequisites; neither is bundled. The service URL and model are fixed in this release.
+- The app has only been verified on macOS 26.5. The minimum supported macOS version has not been established.
+
+## Development setup
 
 ### Prerequisites
 
