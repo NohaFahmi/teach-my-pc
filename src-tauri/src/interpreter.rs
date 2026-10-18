@@ -255,7 +255,7 @@ fn interpret_with(
                 if attempt == 1 {
                     return Err(failure.into_error());
                 }
-                correction = Some(failure.retry_instruction());
+                correction = Some(failure.retry_instruction(instruction));
             }
         }
     }
@@ -286,7 +286,15 @@ impl OutputFailure {
         }
     }
 
-    fn retry_instruction(&self) -> String {
+    fn retry_instruction(&self, instruction: &str) -> String {
+        if self.field == "rule.actions"
+            && self.reason == "action count must match the number of explicitly requested actions"
+        {
+            let count = requested_action_count(instruction);
+            return format!(
+                "Your previous JSON had the wrong number of action objects. The user explicitly requested {count} file operation(s). Return exactly {count} action object(s), one per requested operation. The selected input/source folder only identifies where the app watches for new files; it is not a move action. Keep only the explicitly requested operation(s), preserve their order, and do not duplicate any action."
+            );
+        }
         format!(
             "Validation category: {}; field: {}; issue: {}. Return a corrected complete JSON result.",
             self.category, self.field, self.reason
@@ -303,7 +311,7 @@ fn parse_and_validate(raw: &str, instruction: &str) -> Result<InterpretationResu
         });
     }
     let mut deserializer = serde_json::Deserializer::from_str(raw);
-    let result: InterpretationResult = serde_path_to_error::deserialize(&mut deserializer)
+    let mut result: InterpretationResult = serde_path_to_error::deserialize(&mut deserializer)
         .map_err(|error| {
             let reason = match error.inner().classify() {
                 serde_json::error::Category::Syntax => "invalid JSON syntax",
@@ -317,12 +325,59 @@ fn parse_and_validate(raw: &str, instruction: &str) -> Result<InterpretationResu
                 reason,
             }
         })?;
+    normalize_repeated_single_action(&mut result, instruction);
     validate_result(&result, instruction)?;
-    let mut result = result;
     if let Some(rule) = result.rule.as_mut() {
         rule.title = Some(normalize_title(rule.title.as_deref(), instruction, rule));
     }
     Ok(result)
+}
+
+fn normalize_repeated_single_action(result: &mut InterpretationResult, instruction: &str) {
+    if result.status != InterpretationStatus::Supported || requested_action_count(instruction) != 1
+    {
+        return;
+    }
+    let Some(rule) = result.rule.as_mut() else {
+        return;
+    };
+    if rule.actions.len() > 1
+        && rule
+            .actions
+            .windows(2)
+            .all(|pair| actions_are_identical(&pair[0], &pair[1]))
+    {
+        rule.actions.truncate(1);
+    }
+}
+
+fn actions_are_identical(left: &RuleAction, right: &RuleAction) -> bool {
+    match (left, right) {
+        (RuleAction::Rename { pattern: left }, RuleAction::Rename { pattern: right }) => {
+            left == right
+        }
+        (
+            RuleAction::Move {
+                destination: left_destination,
+                requires_folder_selection: left_selection,
+            },
+            RuleAction::Move {
+                destination: right_destination,
+                requires_folder_selection: right_selection,
+            },
+        )
+        | (
+            RuleAction::Copy {
+                destination: left_destination,
+                requires_folder_selection: left_selection,
+            },
+            RuleAction::Copy {
+                destination: right_destination,
+                requires_folder_selection: right_selection,
+            },
+        ) => left_destination == right_destination && left_selection == right_selection,
+        _ => false,
+    }
 }
 
 fn normalize_title(candidate: Option<&str>, instruction: &str, rule: &ProposedRule) -> String {
@@ -689,6 +744,7 @@ fn validate_semantics(instruction: &str, rule: &ProposedRule) -> Result<(), Outp
         ]
         .iter()
         .any(|phrase| instruction.contains(phrase));
+    let explicit_action_count = requested_action_count(instruction);
     let actions = &rule.actions;
     let has_move = actions
         .iter()
@@ -728,6 +784,12 @@ fn validate_semantics(instruction: &str, rule: &ProposedRule) -> Result<(), Outp
             "proposed action types do not exactly match the explicitly requested actions",
         ));
     }
+    if explicit_action_count > 0 && actions.len() != explicit_action_count {
+        return Err(semantic_failure(
+            "rule.actions",
+            "action count must match the number of explicitly requested actions",
+        ));
+    }
 
     let asks_date = has_english_token(&tokens, &["date", "today", "todays"])
         || ["بتاريخ", "تاريخ", "النهارده", "اليوم"]
@@ -745,6 +807,66 @@ fn validate_semantics(instruction: &str, rule: &ProposedRule) -> Result<(), Outp
         }
     }
     Ok(())
+}
+
+fn count_action_mentions(
+    tokens: &[String],
+    instruction: &str,
+    english_verbs: &[&str],
+    arabic_phrases: &[&str],
+) -> usize {
+    let english_count = tokens
+        .iter()
+        .filter(|token| english_verbs.contains(&token.as_str()))
+        .count();
+    let mut arabic_mentions = Vec::new();
+    for phrase in arabic_phrases {
+        for (start, matched) in instruction.match_indices(phrase) {
+            arabic_mentions.push((start, start + matched.len()));
+        }
+    }
+    arabic_mentions.sort_unstable();
+    let mut arabic_count = 0;
+    let mut previous_end = 0;
+    for (start, end) in arabic_mentions {
+        if start >= previous_end {
+            arabic_count += 1;
+            previous_end = end;
+        } else {
+            previous_end = previous_end.max(end);
+        }
+    }
+    english_count.max(arabic_count)
+}
+
+fn requested_action_count(instruction: &str) -> usize {
+    let tokens: Vec<String> = instruction
+        .split(|character: char| !character.is_ascii_alphanumeric())
+        .filter(|token| !token.is_empty())
+        .map(str::to_ascii_lowercase)
+        .collect();
+    count_action_mentions(
+        &tokens,
+        instruction,
+        &["move", "moves", "moving"],
+        &["انقل", "انقلي", "نقل", "حرك", "حرّك"],
+    ) + count_action_mentions(
+        &tokens,
+        instruction,
+        &["copy", "copies", "copying"],
+        &["انسخ", "انسخي", "نسخ"],
+    ) + count_action_mentions(
+        &tokens,
+        instruction,
+        &["rename", "renames", "renaming"],
+        &[
+            "غير اسم",
+            "غيّر اسم",
+            "تغيير الاسم",
+            "أعد تسمية",
+            "اعادة تسمية",
+        ],
+    )
 }
 
 fn has_english_token(tokens: &[String], candidates: &[&str]) -> bool {
@@ -873,6 +995,129 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_move_response_is_retried_and_corrected_to_one_action() {
+        let instruction =
+            "Move every new PDF file from my selected input folder to my selected output folder.";
+        let duplicate = supported(
+            r#"[".pdf"]"#,
+            &format!(
+                "[{},{}]",
+                move_action("move", "output folder"),
+                move_action("move", "other destination")
+            ),
+        );
+        let corrected = supported(
+            r#"[".pdf"]"#,
+            &format!("[{}]", move_action("move", "output folder")),
+        );
+        let client = Mock::then(&duplicate, &corrected);
+
+        let result = interpret_with(&client, instruction).unwrap();
+
+        assert!(client.saw_correction.get());
+        assert_eq!(result.rule.unwrap().actions.len(), 1);
+    }
+
+    #[test]
+    fn exact_duplicate_actions_collapse_only_for_one_requested_operation() {
+        let instruction =
+            "Move every new PDF file from my selected input folder to my selected output folder.";
+        let duplicate = supported(
+            r#"[".pdf"]"#,
+            &format!(
+                "[{},{}]",
+                move_action("move", "output folder"),
+                move_action("move", "output folder")
+            ),
+        );
+
+        let result = run(instruction, &duplicate).unwrap();
+
+        let actions = result.rule.unwrap().actions;
+        assert_eq!(actions.len(), 1);
+        assert!(matches!(actions[0], RuleAction::Move { .. }));
+    }
+
+    #[test]
+    fn one_move_instruction_yields_exactly_one_move() {
+        let json = supported(
+            r#"[".pdf"]"#,
+            &format!("[{}]", move_action("move", "output folder")),
+        );
+        let result = run(
+            "Move every new PDF file from my selected input folder to my selected output folder.",
+            &json,
+        )
+        .unwrap();
+        let rule = result.rule.unwrap();
+        assert_eq!(rule.trigger.extensions, [".pdf"]);
+        assert_eq!(rule.actions.len(), 1);
+        assert!(matches!(
+            &rule.actions[0],
+            RuleAction::Move { destination, requires_folder_selection }
+                if destination == "output folder" && *requires_folder_selection
+        ));
+    }
+
+    #[test]
+    fn explicit_same_type_actions_keep_order_and_distinct_destinations() {
+        let json = supported(
+            r#"[".pdf"]"#,
+            &format!(
+                "[{},{}]",
+                move_action("copy", "Archive"),
+                move_action("copy", "Backup")
+            ),
+        );
+        let result = run(
+            "Copy new PDF files to Archive, then copy them to Backup",
+            &json,
+        )
+        .unwrap();
+        let actions = result.rule.unwrap().actions;
+        assert_eq!(actions.len(), 2);
+        assert!(
+            matches!(&actions[0], RuleAction::Copy { destination, .. } if destination == "Archive")
+        );
+        assert!(
+            matches!(&actions[1], RuleAction::Copy { destination, .. } if destination == "Backup")
+        );
+    }
+
+    #[test]
+    fn explicit_arabic_same_type_actions_keep_order() {
+        let json = supported(
+            r#"[".pdf"]"#,
+            &format!(
+                "[{},{}]",
+                move_action("copy", "Archive"),
+                move_action("copy", "Backup")
+            ),
+        );
+        let result = run("انسخ ملفات PDF إلى Archive ثم انسخها إلى Backup", &json).unwrap();
+        let actions = result.rule.unwrap().actions;
+        assert_eq!(actions.len(), 2);
+        assert!(
+            matches!(&actions[0], RuleAction::Copy { destination, .. } if destination == "Archive")
+        );
+        assert!(
+            matches!(&actions[1], RuleAction::Copy { destination, .. } if destination == "Backup")
+        );
+    }
+
+    #[test]
+    fn copy_instruction_yields_exactly_one_copy() {
+        let json = supported(
+            r#"[".pdf"]"#,
+            &format!("[{}]", move_action("copy", "Archive")),
+        );
+        let result = run("Copy every new PDF file to Archive", &json).unwrap();
+        let actions = result.rule.unwrap().actions;
+        assert_eq!(actions.len(), 1);
+        assert!(matches!(actions[0], RuleAction::Copy { .. }));
+    }
+
+    #[test]
     fn regression_case_b_arabic_png_rename_with_date() {
         let json = supported(
             r#"[".png"]"#,
@@ -988,20 +1233,20 @@ mod tests {
     }
 
     #[test]
-    fn explicit_multi_action_order_is_preserved() {
+    fn explicit_rename_then_move_order_is_preserved() {
         let json = supported(
             r#"[".txt"]"#,
-            r#"[{"type":"rename","pattern":"{date}-{originalName}"},{"type":"copy","destination":"Archive","requiresFolderSelection":true}]"#,
+            r#"[{"type":"rename","pattern":"{date}-{originalName}"},{"type":"move","destination":"Archive","requiresFolderSelection":true}]"#,
         );
         let result = run(
-            "Rename new TXT files using today's date, then copy them to Archive",
+            "Rename new TXT files using today's date, then move them to Archive",
             &json,
         )
         .unwrap();
-        assert!(matches!(
-            result.rule.unwrap().actions[0],
-            RuleAction::Rename { .. }
-        ));
+        let actions = result.rule.unwrap().actions;
+        assert_eq!(actions.len(), 2);
+        assert!(matches!(actions[0], RuleAction::Rename { .. }));
+        assert!(matches!(actions[1], RuleAction::Move { .. }));
     }
 
     #[test]
@@ -1133,6 +1378,11 @@ mod tests {
     #[ignore = "requires local Ollama and gemma3:4b"]
     fn live_local_model_interpretation() {
         let cases = [
+            (
+                "Move every new PDF file from my selected input folder to my selected output folder.",
+                ".pdf",
+                "move",
+            ),
             ("Move new PDF files to my Documents folder", ".pdf", "move"),
             (
                 "غير اسمها بتاريخ النهارده لما أنزل صورة PNG",
