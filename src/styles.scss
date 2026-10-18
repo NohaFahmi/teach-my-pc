@@ -75,76 +75,23 @@ textarea:focus-visible {
   background: var(--color-accent);
 }
 
-.rule-page .workflow {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.rule-page .workflow li {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  min-width: 0;
-  padding: 10px var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-  color: var(--color-muted);
-  background: var(--color-surface);
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.rule-page .workflow li > span {
-  display: grid;
-  width: 19px;
-  height: 19px;
-  flex: 0 0 19px;
-  place-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  color: var(--color-secondary);
-  font-size: 10px;
-}
-
-.rule-page .workflow p {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.rule-page .workflow .current-step {
-  border-color: var(--color-accent);
-  color: var(--color-text);
-  background: var(--color-surface-raised);
-}
-
-.rule-page .workflow .current-step > span {
-  border-color: var(--color-accent);
-  color: var(--color-selection-text);
-  background: var(--color-accent);
-}
+.rule-page .workflow { display: flex; gap: 5px; padding: 6px; }
+.rule-page .workflow-step { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; padding: 11px 12px; border: 1px solid transparent; border-radius: 8px; color: #84938e; background: transparent; text-align: start; font: inherit; cursor: pointer; }
+.rule-page .workflow-step span { display: grid; width: 25px; height: 25px; flex: 0 0 25px; place-items: center; border-radius: 7px; background: #202a29; font-size: 9px; }
+.rule-page .workflow-step strong { font-size: 11px; font-weight: 550; }
+.rule-page .workflow-step.current-step { border-color: #355748; color: #dcebe4; background: #1b2924; }
+.rule-page .workflow-step.current-step span, .rule-page .workflow-step.completed-step span { color: #9be4c6; background: #20382e; }
+.rule-page .workflow-step:disabled { cursor: default; }
+.rule-page .logic-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 16px 0; }
+.rule-page .logic-card { display: grid; align-content: start; gap: 7px; min-height: 80px; padding: 12px; border: 1px solid #303d3a; border-radius: 8px; background: #141d1c; }
+.rule-page .logic-card > span { color: #82918b; font-size: 8px; font-weight: 700; letter-spacing: .12em; }
+.rule-page .logic-card strong { color: #d5e2dc; font-size: 11px; font-weight: 550; overflow-wrap: anywhere; }
+.rule-page .logic-card small { color: #74847f; font-size: 9px; }
 
 @media (max-width: 600px) {
-  .rule-page .workflow {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .rule-page .workflow li:last-child {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 420px) {
-  .rule-page .workflow {
-    grid-template-columns: 1fr;
-  }
-
-  .rule-page .workflow li:last-child {
-    grid-column: auto;
-  }
+  .rule-page .workflow { display: grid; grid-template-columns: 1fr; }
+  .rule-page .workflow-step { padding: 8px; }
+  .rule-page .logic-flow { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

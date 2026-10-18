@@ -4,6 +4,8 @@
   max-width: 820px;
 }
 
+.workflow-step:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #82e5c4; outline-offset: 2px; }
+
 h1, h2, p {
   margin: 0;
 }
@@ -12,7 +14,7 @@ h1, h2, p {
   margin-bottom: 5px;
 }
 
-.cancel-creation, .cancel-generation {
+.cancel-generation {
   padding: 8px 10px;
   border: 1px solid #394744;
   border-radius: 7px;
@@ -23,16 +25,7 @@ h1, h2, p {
   cursor: pointer;
 }
 
-.cancel-creation:disabled {
-  opacity: .55;
-  cursor: not-allowed;
-}
-
-.cancel-creation {
-  margin-top: 14px;
-}
-
-.cancel-creation:hover, .cancel-generation:hover {
+.cancel-generation:hover {
   border-color: #74dcba;
   color: #b7f1dc;
 }
@@ -193,7 +186,7 @@ textarea::placeholder {
   margin-top: 17px;
 }
 
-.examples > span, .actions > small, .trigger-row small {
+.examples > span {
   color: #758681;
   font-size: 8px;
   font-weight: 700;
@@ -219,27 +212,31 @@ textarea::placeholder {
 .preview {
   padding: 22px;
 }
+.interpretation { margin: 0 0 17px; padding: 13px 15px; border-inline-start: 2px solid var(--color-accent); border-radius: 5px; background: #172220; }
+.interpretation p { margin-top: 7px; color: #c0d0c8; font-size: 12px; line-height: 1.65; }
+.actions-heading { display: flex; justify-content: space-between; align-items: center; color: #778681; font-size: 10px; }
+.step-controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #293533; }
+.section-intro { margin: -7px 0 16px; color: #9ba7aa; font-size: 11px; line-height: 1.6; }
+.folder-card { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: 9px 0; padding: 15px; border: 1px solid #303d39; border-radius: 9px; background: #151e1c; }
+.folder-card > div { display: grid; gap: 7px; min-width: 0; }
+.folder-card strong { color: #dce6e1; font-size: 12px; overflow-wrap: anywhere; }
+.folder-card small { color: #81908a; font-size: 9px; overflow-wrap: anywhere; }
+.readiness { margin-top: 16px; padding: 12px 14px; border: 1px solid #303d39; border-radius: 8px; background: #17211e; }
+.readiness p { margin-top: 6px; color: #b4c4bc; font-size: 10px; }
+.success-card { display: grid; grid-template-columns: 40px 1fr; align-items: start; gap: 14px; padding: 24px; }
+.success-mark { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid #3d6b55; border-radius: 50%; color: #9be4c6; background: #1e3429; }
+.success-card h2 { margin-top: 5px; color: #e0ebe5; font-size: 16px; }
+.success-card p { margin-top: 7px; color: #9eada7; font-size: 11px; }
+.success-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: 9px; margin-top: 5px; }
+.success-actions a { text-decoration: none; }
 
 .preview-heading {
   justify-content: space-between;
   margin-bottom: 18px;
 }
 
-.preview-heading > div {
-  display: grid;
-  grid-template-columns: 32px auto;
-  align-items: center;
-  column-gap: 12px;
-  row-gap: 4px;
-}
-
-.preview-heading .step {
-  grid-row: span 2;
-}
-
 .preview-heading h2 {
-  grid-column: 2;
-  margin-top: -3px;
+  margin: 4px 0 0;
 }
 
 .status-pill {
@@ -248,41 +245,6 @@ textarea::placeholder {
   border-radius: 999px;
   color: #96dfbf;
   background: #192d25;
-  font-size: 9px;
-}
-
-.trigger-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 0;
-  border-top: 1px solid #293533;
-}
-
-.icon {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid #33443f;
-  border-radius: 8px;
-  color: #91d9ba;
-  background: #1c2a26;
-}
-
-.trigger-row div {
-  display: grid;
-  gap: 4px;
-}
-
-.trigger-row strong {
-  color: #dce6e1;
-  font-size: 11px;
-  font-weight: 550;
-}
-
-.trigger-row div > span {
-  color: #778681;
   font-size: 9px;
 }
 
@@ -303,15 +265,6 @@ textarea::placeholder {
   color: #9de7ca;
   background: #1c3028;
   font-size: 9px;
-}
-
-.preview-safety {
-  margin-top: 15px;
-  padding: 10px 12px;
-  border-left: 2px solid #73d8b5;
-  color: #a7c7b8;
-  background: rgba(83, 160, 126, .08);
-  font-size: 10px;
 }
 
 .notice {
@@ -394,10 +347,8 @@ textarea::placeholder {
 .field-label input, .action-editor select { min-height: 36px; padding: 8px 10px; border: 1px solid #344242; border-radius: 7px; outline: none; color: #e9f1ed; background: #111918; font: inherit; font-size: 11px; }
 .field-label input:focus, .action-editor select:focus { border-color: #74dcba; }
 .field-label span { color: #899698; font-size: 10px; }
-.folder-row, .destination, .save-row, .action-tools, .add-actions { display: flex; align-items: center; gap: 9px; }
-.folder-row, .destination { justify-content: space-between; padding: 13px 0; border-top: 1px solid #293533; }
-.folder-row > div, .destination { color: #c5d2cc; font-size: 10px; }
-.folder-row small { display: block; margin-bottom: 5px; color: #a0acae; font-size: 9px; letter-spacing: .13em; }
+.destination, .action-tools, .add-actions { display: flex; align-items: center; gap: 9px; }
+.destination { color: #c5d2cc; font-size: 10px; }
 .secondary-action, .action-tools button, .add-actions button { padding: 7px 9px; border: 1px solid #344441; border-radius: 6px; color: #b8c9c1; background: #1a2423; font: inherit; font-size: 9px; cursor: pointer; }
 .secondary-action:hover, .add-actions button:hover { border-color: #5d9d83; color: #b7f1dc; }
 .action-editor { display: grid; gap: 8px; padding: 11px; border: 1px solid #303b39; border-radius: 8px; }
@@ -405,7 +356,6 @@ textarea::placeholder {
 .action-tools .action-number { margin-right: auto; }
 .action-tools button:disabled { opacity: .4; cursor: not-allowed; }
 .add-actions { margin-top: 3px; }
-.save-row { justify-content: flex-end; margin-top: 14px; }
 .inline-error { margin: 10px 0; color: #f0a99c; font-size: 12px; line-height: 1.5; }
 
 .sr-only {
@@ -431,6 +381,9 @@ textarea::placeholder {
   .composer, .preview {
     padding: 17px;
   }
+  .folder-card { align-items: flex-start; flex-direction: column; }
+  .step-controls { align-items: stretch; }
+  .step-controls button { justify-content: center; }
   .examples {
     align-items: flex-start;
   }

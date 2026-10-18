@@ -41,7 +41,8 @@ export interface ActivityRecord {
   intendedActions: string[];
   completedActions: string[];
   resultingPath: string | null;
-  status: 'success' | 'skipped' | 'failed';
+  // Keep the wire value open so newer backend outcomes remain visible in Activity.
+  status: string;
   error: string | null;
 }
 export interface PlanPreview {

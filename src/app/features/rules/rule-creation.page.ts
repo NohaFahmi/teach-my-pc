@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   FolderChoice,
   ProposedRule,
@@ -15,7 +15,7 @@ type DraftAction =
   | { type: 'move' | 'copy'; destinationFolderId: string; destinationLabel: string };
 @Component({
   selector: 'app-rule-creation-page',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './rule-creation.page.html',
   styleUrl: './rule-creation.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -32,6 +32,10 @@ export class RuleCreationPage {
   readonly actions = signal<DraftAction[]>([]);
   readonly editingId = signal('');
   readonly builderVisible = signal(false);
+  readonly step = signal<0 | 1 | 2>(0);
+  readonly savedRuleId = signal('');
+  readonly savedRuleName = signal('');
+  readonly interpretation = signal('');
   readonly generationCancelled = signal(false);
   readonly error = signal('');
   readonly sourceFolderError = signal('');
@@ -39,14 +43,11 @@ export class RuleCreationPage {
   readonly canGenerate = computed(
     () => this.instruction().trim().length > 0 && this.interpreter.state().status !== 'loading',
   );
-  readonly workflowSteps = [
-    'Describe automation',
-    'Interpret and review',
-    'Authorize folders',
-    'Save disabled',
-    'Dry run, then enable',
-  ];
-  readonly currentStep = computed(() => (this.sourceFolder() ? 2 : this.builderVisible() ? 1 : 0));
+  readonly workflowSteps = ['Describe', 'Review & Edit', 'Authorize & Save'];
+  readonly currentStep = computed(() => this.step());
+  readonly missingDestinations = computed(
+    () => this.actions().filter((action) => action.type !== 'rename' && !action.destinationFolderId).length,
+  );
   readonly examples = [
     'Rename new PDFs with today’s date and their original name.',
     'Move new JPG files to my Photos folder.',
@@ -63,9 +64,10 @@ export class RuleCreationPage {
   }
   async generate(): Promise<void> {
     const generationVersion = ++this.generationVersion;
+    const instruction = this.instruction();
     this.clearDraftFields();
-    await this.interpreter.interpret(this.instruction());
-    if (generationVersion !== this.generationVersion) return;
+    await this.interpreter.interpret(instruction);
+    if (generationVersion !== this.generationVersion || instruction !== this.instruction()) return;
     const state = this.interpreter.state();
     if (state.status === 'result' && state.result.status === 'supported' && state.result.rule) {
       const rule = state.result.rule;
@@ -74,6 +76,8 @@ export class RuleCreationPage {
         this.title.set(rule.title?.trim() || this.fallbackTitle(rule));
       this.extensions.set(rule.trigger.extensions.join(', '));
       this.builderVisible.set(true);
+      this.step.set(1);
+      this.interpretation.set(state.result.message);
       this.sourceFolder.set(null);
       this.actions.set(
         rule.actions.map((action) =>
@@ -110,7 +114,23 @@ export class RuleCreationPage {
     this.sourceFolderError.set('');
   }
   useExample(example: string): void {
+    this.invalidateInterpretation();
     this.instruction.set(example);
+  }
+  updateInstruction(value: string): void {
+    if (value !== this.instruction()) this.invalidateInterpretation();
+    this.instruction.set(value);
+  }
+  private invalidateInterpretation(): void {
+    this.generationVersion++;
+    if (this.interpreter.state().status !== 'idle') this.interpreter.cancel();
+  }
+  goToStep(step: number): void {
+    if (step === 0 || (step === 1 && this.builderVisible()) || (step === 2 && this.builderVisible())) {
+      this.step.set(step as 0 | 1 | 2);
+      this.error.set('');
+      this.sourceFolderError.set('');
+    }
   }
   setTitle(value: string): void {
     this.title.set(value);
@@ -218,7 +238,10 @@ export class RuleCreationPage {
     };
     this.busy.set(true);
     try {
-      await this.store.save(rule);
+      const saved = await this.store.save(rule);
+      this.savedRuleId.set(saved.id);
+      this.savedRuleName.set(saved.title);
+      this.step.set(0);
       this.generationVersion++;
       this.interpreter.cancel();
       this.instruction.set('');
@@ -232,6 +255,7 @@ export class RuleCreationPage {
       this.generationCancelled.set(false);
       this.error.set('');
       this.sourceFolderError.set('');
+      this.interpretation.set('');
     } catch (error: unknown) {
       this.error.set(this.errorText(error));
     } finally {
@@ -244,6 +268,8 @@ export class RuleCreationPage {
     this.extensions.set(rule.trigger.extensions.join(', '));
     this.titleManuallyEdited.set(true);
     this.builderVisible.set(true);
+    this.step.set(1);
+    this.interpretation.set('Editing your saved rule. Review the trigger, filters, and ordered actions below.');
     this.sourceFolder.set(
       this.store.folders().find((folder) => folder.id === rule.sourceFolderId) ?? {
         id: rule.sourceFolderId,

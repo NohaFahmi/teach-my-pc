@@ -45,7 +45,7 @@ describe('RuleCreationPage', () => {
     const fixture = TestBed.createComponent(RuleCreationPage);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('What should happen?');
+    expect(fixture.nativeElement.textContent).toContain('Describe the task');
     expect(fixture.nativeElement.textContent).toContain('Generate preview');
     expect(fixture.nativeElement.textContent).not.toContain('My Rules');
     fixture.destroy();
@@ -55,6 +55,7 @@ describe('RuleCreationPage', () => {
     const fixture = TestBed.createComponent(RuleCreationPage);
     const page = fixture.componentInstance;
     page.builderVisible.set(true);
+    page.step.set(1);
     page.actions.set([
       { type: 'rename', pattern: '{originalName}' },
       { type: 'move', destinationFolderId: '', destinationLabel: '' },
@@ -83,19 +84,21 @@ describe('RuleCreationPage', () => {
     const fixture = TestBed.createComponent(RuleCreationPage);
     const page = fixture.componentInstance;
     page.builderVisible.set(true);
+    page.step.set(0);
     page.title.set('A rule');
     page.actions.set([{ type: 'rename', pattern: '{originalName}' }]);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('#instruction')?.getAttribute('dir')).toBe('auto');
     expect(fixture.nativeElement.querySelector('#instruction')?.getAttribute('aria-label')).toBeNull();
+    page.step.set(2);
+    fixture.detectChanges();
     await page.save();
     fixture.detectChanges();
 
     const folderError = fixture.nativeElement.querySelector('#source-folder-error');
     expect(folderError?.textContent).toContain('Choose an authorized source folder');
-    expect(fixture.nativeElement.querySelector('.folder-row')?.contains(folderError)).toBe(true);
-    expect(fixture.nativeElement.querySelector('.folder-row button')?.getAttribute('aria-describedby')).toBe('source-folder-error');
+    expect(fixture.nativeElement.querySelector('.folder-card')?.parentElement?.contains(folderError)).toBe(true);
     expect(save).not.toHaveBeenCalled();
     fixture.destroy();
   });
@@ -211,6 +214,89 @@ describe('RuleCreationPage', () => {
     fixture.componentInstance.title.set('Unsaved edit');
 
     expect(store.rules()[0]).toEqual(savedRule);
+    fixture.destroy();
+  });
+
+  it('moves through the three steps and retains edits when going back', () => {
+    const fixture = TestBed.createComponent(RuleCreationPage);
+    const page = fixture.componentInstance;
+    page.builderVisible.set(true);
+    page.step.set(1);
+    page.title.set('Edited name');
+    page.extensions.set('.pdf, .docx');
+    page.actions.set([{ type: 'rename', pattern: '{date}-{originalName}' }, { type: 'move', destinationFolderId: '', destinationLabel: '' }]);
+    page.goToStep(2);
+    page.goToStep(1);
+    expect(page.step()).toBe(1);
+    expect(page.title()).toBe('Edited name');
+    expect(page.extensions()).toBe('.pdf, .docx');
+    expect(page.actions().map((action) => action.type)).toEqual(['rename', 'move']);
+    fixture.destroy();
+  });
+
+  it('does not advance after a failed interpretation', async () => {
+    const interpreter = TestBed.inject(RuleInterpreterService);
+    vi.spyOn(interpreter, 'interpret').mockImplementation(async () => {
+      interpreter.state.set({ status: 'error', message: 'Model unavailable' });
+    });
+    const fixture = TestBed.createComponent(RuleCreationPage);
+    const page = fixture.componentInstance;
+    page.instruction.set('Move new PDFs');
+    await page.generate();
+    expect(page.step()).toBe(0);
+    expect(page.builderVisible()).toBe(false);
+    fixture.destroy();
+  });
+
+  it('supports both English and Arabic example prompts', () => {
+    const fixture = TestBed.createComponent(RuleCreationPage);
+    const page = fixture.componentInstance;
+    expect(page.examples.some((example) => /[A-Za-z]/.test(example))).toBe(true);
+    expect(page.examples.some((example) => /[\u0600-\u06ff]/.test(example))).toBe(true);
+    page.useExample(page.examples[2] ?? '');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#instruction')?.getAttribute('dir')).toBe('auto');
+    fixture.destroy();
+  });
+
+  it('ignores a parse result after the instruction changes', async () => {
+    const interpreter = TestBed.inject(RuleInterpreterService);
+    let finishInterpretation: (() => void) | undefined;
+    vi.spyOn(interpreter, 'interpret').mockImplementation(() => new Promise<void>((resolve) => {
+      finishInterpretation = () => {
+        interpreter.state.set({ status: 'result', result: {
+          status: 'supported', rule: { title: 'Stale', trigger: savedRule.trigger, actions: savedRule.actions.map((action) => action.type === 'rename' ? action : { ...action, destination: 'Archive', requiresFolderSelection: true }) },
+          message: 'Stale result', clarificationQuestions: [],
+        } });
+        resolve();
+      };
+    }));
+    const fixture = TestBed.createComponent(RuleCreationPage);
+    const page = fixture.componentInstance;
+    page.instruction.set('First request');
+    const pending = page.generate();
+    page.updateInstruction('Edited while parsing');
+    finishInterpretation?.();
+    await pending;
+    expect(page.step()).toBe(0);
+    expect(page.builderVisible()).toBe(false);
+    fixture.destroy();
+  });
+
+  it('shows a disabled-rule success state after saving', async () => {
+    const store = TestBed.inject(RuleStoreService);
+    vi.spyOn(store, 'save').mockResolvedValue(savedRule);
+    const fixture = TestBed.createComponent(RuleCreationPage);
+    const page = fixture.componentInstance;
+    page.title.set(savedRule.title);
+    page.sourceFolder.set({ id: savedRule.sourceFolderId, name: 'Inbox' });
+    page.actions.set([{ type: 'rename', pattern: '{originalName}' }]);
+    page.step.set(2);
+    page.builderVisible.set(true);
+    await page.save();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('It is saved and disabled');
+    expect(fixture.nativeElement.querySelector('a[routerLink="/"]')?.textContent).toContain('dry run or enable');
     fixture.destroy();
   });
 });

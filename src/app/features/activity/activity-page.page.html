@@ -1,30 +1,49 @@
 <main class="activity-page">
-  <header class="page-heading">
-    <span class="eyebrow">LOCAL AUTOMATION HISTORY</span>
-    <h1>Activity</h1>
-    <p>Recent actions performed by your enabled rules.</p>
-  </header>
-
+  <header class="page-heading"><div><h1>Activity</h1><p>Execution history for files handled by your rules.</p></div></header>
+  <nav class="activity-filters" aria-label="Filter activity by outcome">
+    @for (item of filters; track item.id) { <button type="button" [class.active]="filter() === item.id" [attr.aria-pressed]="filter() === item.id" (click)="setFilter(item.id)">{{ item.label }}</button> }
+  </nav>
   @if (store.activityError()) {
-    <p class="activity-error" role="alert">Could not load activity: {{ store.activityError() }}</p>
+    <section class="state-panel" role="alert"><h2>Activity couldn’t be loaded</h2><p>{{ store.activityError() }}</p></section>
   } @else if (store.activityLoading() && !store.activities().length) {
-    <p class="activity-empty">Loading recent activity…</p>
+    <p class="state-inline" role="status">Loading activity…</p>
   } @else if (!store.activities().length) {
-    <section class="activity-empty"><h2>No activity yet</h2><p>When an enabled rule processes a new file, its result will appear here.</p></section>
+    <section class="state-panel"><h2>No activity yet</h2><p>When a rule processes a file, its recorded result will appear here.</p></section>
+  } @else if (!groups().length) {
+    <section class="state-panel"><h2>No matching activity</h2><p>There are no events for this outcome.</p></section>
   } @else {
-    <section class="activity-list" aria-label="Recent automation activity">
-      @for (record of store.activities(); track $index) {
-        <article class="activity-item">
-          <div class="activity-heading">
-            <span class="activity-state" [class.success]="record.status === 'success'" [class.skipped]="record.status === 'skipped'" [class.failed]="record.status === 'failed'">{{ record.status }}</span>
-            <time>{{ record.timestamp * 1000 | date:'medium' }}</time>
-          </div>
-          <p class="activity-rule">{{ ruleTitle(record.ruleId) }}</p>
-          <h2>{{ record.sourceFilename }}</h2>
-          <p class="activity-actions">{{ activitySummary(record) || 'No actions completed' }}</p>
-          @if (record.resultingPath) { <details class="path-details"><summary>Full destination path</summary><code [title]="record.resultingPath">{{ record.resultingPath }}</code></details> }
-          @if (record.error) { <p class="activity-error">{{ record.error }}</p> }
-        </article>
+    <section class="timeline" aria-label="Execution history">
+      @for (group of groups(); track group.key) {
+        <section class="timeline-day" [attr.aria-label]="group.label"><h2 class="day-heading">{{ group.label }}</h2>
+          <ol class="event-list">
+            @for (event of group.events; track event.key) {
+              <li class="event" [class]="'event ' + event.record.status">
+                <span class="timeline-marker" aria-hidden="true">{{ statusIcon(event.record.status) }}</span>
+                <article class="event-content">
+                  <div class="event-topline"><span class="status-label"><span aria-hidden="true">{{ statusIcon(event.record.status) }}</span>{{ statusLabel(event.record.status) }}</span><time>{{ event.record.timestamp * 1000 | date:'shortTime' }}</time></div>
+                  <p class="operation">{{ operationSummary(event.record) }}</p>
+                  <h3 [title]="event.record.sourceFilename">{{ event.record.sourceFilename }}</h3>
+                  @if (event.record.status === 'partial_failure') { <p class="outcome-note">{{ event.record.completedActions.length }} action{{ event.record.completedActions.length === 1 ? '' : 's' }} completed before failure.</p> }
+                  @else if (isCollision(event.record)) { <p class="outcome-note">Destination already exists. The source file was preserved.</p> }
+                  @if (event.record.error && event.record.status !== 'skipped') { <p class="outcome-note failure-reason">{{ event.record.error }}</p> }
+                  @if (event.record.resultingPath) { <p class="destination">Resulting path: <span [title]="event.record.resultingPath">{{ pathSummary(event.record) }}</span></p> }
+                  <p class="rule-name">Rule <strong>{{ ruleTitle(event.record.ruleId) }}</strong></p>
+                  <button class="details-toggle" type="button" [attr.aria-expanded]="isExpanded(event.key)" [attr.aria-controls]="'details-' + event.key" (click)="toggleDetails(event.key)">{{ isExpanded(event.key) ? 'Hide details' : 'Show details' }}</button>
+                  @if (isExpanded(event.key)) {
+                    <div class="event-details" [id]="'details-' + event.key"><dl>
+                      <dt>Source path</dt><dd><code>{{ event.record.sourcePath }}</code></dd>
+                      @if (event.record.resultingPath) { <dt>Resulting path</dt><dd><code>{{ event.record.resultingPath }}</code></dd> }
+                      <dt>Recorded outcome</dt><dd><code>{{ event.record.status }}</code></dd>
+                      <dt>Intended actions</dt><dd>{{ event.record.intendedActions.length ? event.record.intendedActions.join(' → ') : 'None recorded' }}</dd>
+                      <dt>Completed actions</dt><dd>{{ event.record.completedActions.length ? event.record.completedActions.join(' → ') : 'None recorded' }}</dd>
+                      @if (event.record.error) { <dt>Error details</dt><dd class="diagnostic"><pre>{{ event.record.error }}</pre></dd> }
+                    </dl></div>
+                  }
+                </article>
+              </li>
+            }
+          </ol>
+        </section>
       }
     </section>
   }

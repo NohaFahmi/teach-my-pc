@@ -1,143 +1,98 @@
 <main class="rule-page">
-  <header class="page-heading"><span class="eyebrow"><span class="eyebrow-line"></span> RULE WORKSHOP</span>
-    <h1>Teach your Mac<br /><span>the little things.</span></h1>
-    <p>Describe a file task in your own words. Review and approve every detail before saving.</p>
-<!--    <button class="cancel-creation" type="button" [disabled]="busy()"-->
-<!--            (click)="discardDraft()">{{ editingId() ? 'Discard changes' : 'Discard draft' }}-->
-<!--    </button>-->
+  <header class="page-heading">
+    <span class="eyebrow"><span class="eyebrow-line"></span> AUTOMATION WORKBENCH</span>
+    <h1>Make the small things<br /><span>take care of themselves.</span></h1>
+    <p>Describe a file task, review exactly what it will do, then choose the folders it may access.</p>
   </header>
-  <ol class="workflow" aria-label="Rule creation steps">@for (step of workflowSteps; track step; let i = $index) {
-    <li [class.current-step]="currentStep() === i" [attr.aria-current]="currentStep() === i ? 'step' : null">
-      <span>{{ i + 1 }}</span>
-      <p>{{ step }}</p></li>
-  }</ol>
-  <section class="composer panel" aria-labelledby="instruction-heading">
-    <div class="section-title"><span class="step">01</span>
-      <div><h2 id="instruction-heading">What should happen?</h2>
-        <p>English and Arabic are supported.</p></div>
-    </div>
-    <label class="sr-only" for="instruction">Describe your automation</label><textarea id="instruction" dir="auto"
-                                                                                       [ngModel]="instruction()"
-                                                                                       (ngModelChange)="instruction.set($event)"
-                                                                                       maxlength="2000"
-                                                                                       placeholder="When a new PDF is created, rename it with today’s date…"></textarea>
-    <div class="composer-foot"><span>{{ instruction().length }} / 2,000</span>
-      <div class="generate-actions">@if (interpreter.state().status === 'loading') {
-        <button class="cancel-generation" type="button" (click)="cancelGeneration()">Stop generating</button>
-      }
-        <button class="primary-action" type="button" [disabled]="!canGenerate()"
-                (click)="generate()">@if (interpreter.state().status === 'loading') {
-          <span class="spinner"></span><span>Interpreting…</span>
-        } @else {
-          <span>Generate preview</span><span aria-hidden="true">↗</span>
-        }</button>
-      </div>
-    </div>
-    @if (generationCancelled()) {
-      <p class="cancelled-status" role="status">Preview cancelled. The local model may finish its current request in the
-        background.</p>
-    }
-    <div class="examples"><span>TRY AN EXAMPLE</span>@for (example of examples; track example) {
-      <button type="button" (click)="useExample(example)">{{ example }}</button>
-    }</div>
-  </section>
-  @if (interpreter.state(); as state) {
-    @if (state.status === 'error') {
-      <section class="notice error" role="alert"><span class="notice-icon">!</span>
-        <div><h2>Couldn’t generate a preview</h2>
-          <p>{{ state.message }}</p></div>
-        <button class="retry" (click)="generate()" [disabled]="!instruction().trim()">Retry</button>
-      </section>
-    }
-    @if (state.status === 'result' && state.result.status === 'needs_clarification') {
-      <section class="notice clarify"><span class="notice-icon">?</span>
-        <div><h2>A little more detail is needed</h2>
-          <p>{{ state.result.message }}</p>
-          <ul>@for (question of state.result.clarificationQuestions; track question) {
-            <li>{{ question }}</li>
-          }</ul>
-        </div>
-      </section>
-    }
-    @if (state.status === 'result' && state.result.status === 'unsupported') {
-      <section class="notice unsupported"><span class="notice-icon">×</span>
-        <div><h2>That request isn’t supported yet</h2>
-          <p>{{ state.result.message }}</p></div>
-      </section>
-    }
-  }
-  @if (builderVisible()) {
-    <section class="preview panel" aria-labelledby="preview-title">
-      <div class="preview-heading">
-        <div><span class="step">02</span><span class="section-kicker">REVIEW AND EDIT</span>
-          <h2 id="preview-title">Rule builder</h2></div>
-        <span class="status-pill">Draft · not running</span></div>
-      <label class="field-label">Rule title<input [ngModel]="title()" (ngModelChange)="setTitle($event)"
-                                                  maxlength="80" /></label>
-      <label class="field-label">File extensions, comma separated<input [ngModel]="extensions()"
-                                                                        (ngModelChange)="extensions.set($event)"
-                                                                        placeholder=".pdf, .docx (blank means all files)" /></label>
-      <div class="trigger-row"><span class="icon">◷</span>
-        <div><small>WHEN</small><strong>A new file is created</strong><span>Trigger: file_created</span></div>
-      </div>
-      <div class="folder-row">
-        <div><small>SOURCE FOLDER TO
-          MONITOR</small><strong>{{ sourceFolder()?.name ?? 'Choose an authorized folder' }}</strong>
-          <p>TeachMyPC can only watch folders you select here. This keeps access limited to the files you intend to
-            automate.</p>@if (sourceFolderError()) {
-            <p class="inline-error" id="source-folder-error" role="alert">{{ sourceFolderError() }}</p>
-          }</div>
-        <button class="secondary-action" type="button" (click)="pickSource()"
-                [attr.aria-describedby]="sourceFolderError() ? 'source-folder-error' : null">Select folder
-        </button>
-      </div>
-      <div class="actions"><small>THEN, IN THIS ORDER</small>
-        @for (action of actions(); track $index; let i = $index) {
-          <div class="action-editor">
-            <div class="action-tools"><span class="action-number">{{ i + 1 }}</span>
-              <button type="button" (click)="moveAction(i, -1)" [disabled]="i === 0"
-                      [attr.aria-label]="'Move action ' + (i + 1) + ' up'">↑
-              </button>
-              <button type="button" (click)="moveAction(i, 1)" [disabled]="i === actions().length - 1"
-                      [attr.aria-label]="'Move action ' + (i + 1) + ' down'">↓
-              </button>
-              <button type="button" (click)="removeAction(i)" [attr.aria-label]="'Remove action ' + (i + 1)">Remove
-              </button>
-            </div>
-            <label class="field-label" [for]="'action-type-' + i">Action {{ i + 1 }} type</label><select
-            [id]="'action-type-' + i" [ngModel]="action.type" (ngModelChange)="changeActionType(i, $event)">
-            <option value="rename">Rename</option>
-            <option value="move">Move</option>
-            <option value="copy">Copy</option>
-          </select>
-            @if (action.type === 'rename') {
-              <label class="field-label">Rename template<input [ngModel]="action.pattern"
-                                                               (ngModelChange)="updateAction(i, {pattern: $event})"
-                                                               placeholder="{date}-{originalName}" /><span>Supported placeholders: originalName and date. Original extension is preserved.</span></label>
-            } @else {
-              <div class="destination"><span>{{ action.destinationLabel || 'Choose destination folder' }}</span>
-                <button class="secondary-action" type="button" (click)="pickDestination(i)">Select destination</button>
-              </div>
-            }
-          </div>
-        }
-        <div class="add-actions">
-          <button type="button" (click)="addAction('rename')">+ Rename</button>
-          <button type="button" (click)="addAction('move')">+ Move</button>
-          <button type="button" (click)="addAction('copy')">+ Copy</button>
-        </div>
-      </div>
-      <div class="preview-safety">Saving stores this rule disabled. Enable it explicitly from My Rules after reviewing
-        its authorized folders and actions.
-      </div>
-      @if (error()) {
-        <p class="inline-error" role="alert">{{ error() }}</p>
-      }
-      <div class="save-row">
-        <button class="primary-action" type="button" [disabled]="busy()"
-                (click)="save()">{{ busy() ? 'Saving…' : editingId() ? 'Update rule' : 'Save disabled rule' }}
-        </button>
-      </div>
+
+  @if (savedRuleId()) {
+    <section class="success-card panel" aria-labelledby="success-title" role="status">
+      <span class="success-mark" aria-hidden="true">✓</span>
+      <div><span class="section-kicker">RULE SAVED</span><h2 id="success-title">{{ savedRuleName() || 'Your rule' }} is ready.</h2>
+        <p>It is saved and disabled. Saving did not start monitoring.</p></div>
+      <div class="success-actions"><a class="primary-action" routerLink="/">Open Workbench to dry run or enable</a>
+        <button class="secondary-action" type="button" (click)="savedRuleId.set('')">Create another rule</button></div>
     </section>
+  } @else {
+    <nav class="workflow panel" aria-label="Rule creation progress">
+      @for (stepName of workflowSteps; track stepName; let i = $index) {
+        <button type="button" class="workflow-step" [class.current-step]="currentStep() === i"
+                [class.completed-step]="currentStep() > i" [attr.aria-current]="currentStep() === i ? 'step' : null"
+                [disabled]="i > currentStep() && !builderVisible()" (click)="i <= currentStep() ? goToStep(i) : null">
+          <span>{{ currentStep() > i ? '✓' : '0' + (i + 1) }}</span><strong>{{ stepName }}</strong>
+        </button>
+      }
+    </nav>
+
+    @if (currentStep() === 0) {
+      <section class="composer panel" aria-labelledby="instruction-heading">
+        <div class="section-title"><span class="step">01</span><div><h2 id="instruction-heading">Describe the task</h2>
+          <p>Use English or Arabic. TeachMyPC will turn it into a reviewable rule.</p></div></div>
+        <label class="sr-only" for="instruction">Describe your automation</label>
+        <textarea id="instruction" dir="auto" [ngModel]="instruction()" (ngModelChange)="updateInstruction($event)"
+          maxlength="2000" placeholder="When a new PDF is created, rename it with today’s date…" aria-describedby="instruction-help"></textarea>
+        <div id="instruction-help" class="composer-foot"><span>{{ instruction().length }} / 2,000</span><div class="generate-actions">
+          @if (interpreter.state().status === 'loading') { <button class="cancel-generation" type="button" (click)="cancelGeneration()">Stop</button> }
+          <button class="primary-action" type="button" [disabled]="!canGenerate()" (click)="generate()">
+            @if (interpreter.state().status === 'loading') { <span class="spinner"></span><span>Interpreting…</span> }
+            @else { <span>Generate preview</span><span aria-hidden="true">↗</span> }
+          </button></div></div>
+        @if (generationCancelled()) { <p class="cancelled-status" role="status">Preview cancelled.</p> }
+        <div class="examples"><span>EXAMPLES</span>@for (example of examples; track example) {
+          <button type="button" dir="auto" (click)="useExample(example)">{{ example }}</button> }</div>
+      </section>
+      @if (interpreter.state(); as state) {
+        @if (state.status === 'error') { <section class="notice error" role="alert"><span class="notice-icon">!</span><div><h2>Couldn’t generate a preview</h2><p>{{ state.message }}</p></div><button class="retry" type="button" (click)="generate()" [disabled]="!instruction().trim()">Retry</button></section> }
+        @if (state.status === 'result' && state.result.status === 'needs_clarification') { <section class="notice clarify" role="status"><span class="notice-icon">?</span><div><h2>A little more detail is needed</h2><p>{{ state.result.message }}</p><ul>@for (question of state.result.clarificationQuestions; track question) { <li>{{ question }}</li> }</ul></div></section> }
+        @if (state.status === 'result' && state.result.status === 'unsupported') { <section class="notice unsupported" role="status"><span class="notice-icon">×</span><div><h2>That request isn’t supported yet</h2><p>{{ state.result.message }}</p></div></section> }
+      }
+    }
+
+    @if (builderVisible() && currentStep() === 1) {
+      <section class="preview panel" aria-labelledby="preview-title">
+        <div class="preview-heading"><div><span class="section-kicker">STEP 02</span><h2 id="preview-title">Review &amp; edit</h2></div><span class="status-pill">Draft · not running</span></div>
+        <div class="interpretation"><span class="section-kicker">INTERPRETATION</span><p dir="auto">{{ interpretation() }}</p></div>
+        <label class="field-label">Rule name<input [ngModel]="title()" (ngModelChange)="setTitle($event)" maxlength="80" /></label>
+        <div class="logic-flow" aria-label="Rule logic: when a file is created, if it matches the selected extensions, then perform these actions">
+          <section class="logic-card"><span>WHEN</span><strong>A file is created</strong><small>Supported trigger · file_created</small></section>
+          <section class="logic-card"><span>IF</span><strong>{{ extensions().trim() || 'Any file extension' }}</strong><small>File extension filter</small></section>
+          <section class="logic-card then-card"><span>THEN · IN ORDER</span>
+            @for (action of actions(); track $index; let i = $index) { <strong>{{ i + 1 }}. {{ action.type === 'rename' ? 'Rename file' : action.type === 'move' ? 'Move file' : 'Copy file' }}</strong> }
+          </section>
+        </div>
+        <label class="field-label">File extensions<input [ngModel]="extensions()" (ngModelChange)="extensions.set($event)" placeholder=".pdf, .docx · leave blank for all files" /><span>Comma separated. Leave blank to match any extension.</span></label>
+        <div class="actions"><div class="actions-heading"><span class="section-kicker">ACTIONS</span><span>Run from top to bottom</span></div>
+          @for (action of actions(); track $index; let i = $index) {
+            <div class="action-editor"><div class="action-tools"><span class="action-number">{{ i + 1 }}</span>
+              <button type="button" (click)="moveAction(i, -1)" [disabled]="i === 0" [attr.aria-label]="'Move action ' + (i + 1) + ' up'">↑</button>
+              <button type="button" (click)="moveAction(i, 1)" [disabled]="i === actions().length - 1" [attr.aria-label]="'Move action ' + (i + 1) + ' down'">↓</button>
+              <button type="button" (click)="removeAction(i)" [attr.aria-label]="'Remove action ' + (i + 1)">Remove</button></div>
+              <label class="field-label" [for]="'action-type-' + i">Action {{ i + 1 }} type</label><select [id]="'action-type-' + i" [ngModel]="action.type" (ngModelChange)="changeActionType(i, $event)"><option value="rename">Rename</option><option value="move">Move</option><option value="copy">Copy</option></select>
+              @if (action.type === 'rename') { <label class="field-label">Rename template<input dir="auto" [ngModel]="action.pattern" (ngModelChange)="updateAction(i, {pattern: $event})" placeholder="{date}-{originalName}" /><span>Supported: originalName and date. Original extension is preserved.</span></label> }
+              @else { <div class="destination"><span>{{ action.destinationLabel || 'Destination will be selected next' }}</span></div> }
+            </div>
+          }
+          <div class="add-actions"><button type="button" (click)="addAction('rename')">+ Rename</button><button type="button" (click)="addAction('move')">+ Move</button><button type="button" (click)="addAction('copy')">+ Copy</button></div>
+        </div>
+        @if (error()) { <p class="inline-error" role="alert">{{ error() }}</p> }
+        <div class="step-controls"><button class="secondary-action" type="button" (click)="goToStep(0)">Back</button><button class="primary-action" type="button" [disabled]="!title().trim() || !actions().length" (click)="goToStep(2)">Continue to folders <span aria-hidden="true">→</span></button></div>
+      </section>
+    }
+
+    @if (builderVisible() && currentStep() === 2) {
+      <section class="preview panel" aria-labelledby="authorize-title">
+        <div class="preview-heading"><div><span class="section-kicker">STEP 03</span><h2 id="authorize-title">Authorize &amp; save</h2></div><span class="status-pill">Will be saved disabled</span></div>
+        <p class="section-intro">Choose the folders this rule may access. Saving stores the rule; it does not start monitoring.</p>
+        <div class="folder-card"><div><span class="section-kicker">SOURCE · WATCH FOR NEW FILES</span><strong dir="auto">{{ sourceFolder()?.name ?? 'No source folder selected' }}</strong></div>
+          <button class="secondary-action" type="button" (click)="pickSource()">{{ sourceFolder() ? 'Change folder' : 'Choose folder' }}</button></div>
+        @if (sourceFolderError()) { <p class="inline-error" id="source-folder-error" role="alert">{{ sourceFolderError() }}</p> }
+        @for (action of actions(); track $index; let i = $index) { @if (action.type !== 'rename') {
+          <div class="folder-card"><div><span class="section-kicker">ACTION {{ i + 1 }} · {{ action.type === 'move' ? 'MOVE DESTINATION' : 'COPY DESTINATION' }}</span><strong dir="auto">{{ action.destinationLabel || 'No destination selected' }}</strong></div><button class="secondary-action" type="button" (click)="pickDestination(i)">{{ action.destinationFolderId ? 'Change folder' : 'Choose folder' }}</button></div>
+        } }
+        <aside class="readiness" aria-live="polite"><span class="section-kicker">READY TO SAVE</span><p>{{ sourceFolder() ? 'Source folder authorized' : 'Choose a source folder' }} · {{ actions().length }} action{{ actions().length === 1 ? '' : 's' }} · {{ missingDestinations() }} destination{{ missingDestinations() === 1 ? '' : 's' }} remaining</p></aside>
+        @if (error()) { <p class="inline-error" role="alert">{{ error() }}</p> }
+        <div class="step-controls"><button class="secondary-action" type="button" (click)="goToStep(1)">Back</button><button class="primary-action" type="button" [disabled]="busy()" (click)="save()">{{ busy() ? 'Saving…' : editingId() ? 'Save changes disabled' : 'Save disabled rule' }}</button></div>
+      </section>
+    }
   }
 </main>
