@@ -43,3 +43,7 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 .vscode
+/artifacts
+/qa
+playwright.config.ts
+/docs/TeachMyPC_Visual_Audit_2026-10-18.md

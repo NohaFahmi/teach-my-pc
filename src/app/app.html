@@ -6,16 +6,16 @@
     </a>
 
     <nav class="nav-list" aria-label="Main navigation">
-      <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page">
+      <a class="nav-link" routerLink="/" [class.active]="currentPath() === '/'" [attr.aria-current]="currentPath() === '/' ? 'page' : null" aria-label="Workbench" title="Workbench">
         <span class="nav-icon" aria-hidden="true">⌂</span><span>Workbench</span>
       </a>
-      <a class="nav-link" routerLink="/rules" routerLinkActive="active" ariaCurrentWhenActive="page">
+      <a class="nav-link" routerLink="/rules" [class.active]="currentPath() === '/rules'" [attr.aria-current]="currentPath() === '/rules' ? 'page' : null" aria-label="Create rule" title="Create rule">
         <span class="nav-icon" aria-hidden="true">＋</span><span>Create rule</span>
       </a>
-      <a class="nav-link" routerLink="/activity" routerLinkActive="active" ariaCurrentWhenActive="page">
+      <a class="nav-link" routerLink="/activity" [class.active]="currentPath() === '/activity'" [attr.aria-current]="currentPath() === '/activity' ? 'page' : null" aria-label="Activity" title="Activity">
         <span class="nav-icon" aria-hidden="true">◷</span><span>Activity</span>
       </a>
-      <a class="nav-link" routerLink="/settings" routerLinkActive="active" ariaCurrentWhenActive="page">
+      <a class="nav-link" routerLink="/settings" [class.active]="currentPath() === '/settings'" [attr.aria-current]="currentPath() === '/settings' ? 'page' : null" aria-label="Settings" title="Settings">
         <span class="nav-icon" aria-hidden="true">⚙</span><span>Settings</span>
       </a>
     </nav>

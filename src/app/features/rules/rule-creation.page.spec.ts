@@ -51,6 +51,55 @@ describe('RuleCreationPage', () => {
     fixture.destroy();
   });
 
+  it('gives action selectors and controls position-specific accessible names after reorder and removal', () => {
+    const fixture = TestBed.createComponent(RuleCreationPage);
+    const page = fixture.componentInstance;
+    page.builderVisible.set(true);
+    page.actions.set([
+      { type: 'rename', pattern: '{originalName}' },
+      { type: 'move', destinationFolderId: '', destinationLabel: '' },
+    ]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('label[for="action-type-0"]')?.textContent).toContain('Action 1 type');
+    expect(fixture.nativeElement.querySelector('label[for="action-type-1"]')?.textContent).toContain('Action 2 type');
+    expect(fixture.nativeElement.querySelector('[aria-label="Remove action 2"]')).not.toBeNull();
+
+    page.moveAction(1, -1);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('label[for="action-type-0"]')?.textContent).toContain('Action 1 type');
+    expect(page.actions()[0]?.type).toBe('move');
+
+    page.removeAction(0);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.action-editor select')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelector('label[for="action-type-0"]')?.textContent).toContain('Action 1 type');
+    fixture.destroy();
+  });
+
+  it('sets automatic prompt direction and places missing-source validation beside its control without saving', async () => {
+    const store = TestBed.inject(RuleStoreService);
+    const save = vi.spyOn(store, 'save');
+    const fixture = TestBed.createComponent(RuleCreationPage);
+    const page = fixture.componentInstance;
+    page.builderVisible.set(true);
+    page.title.set('A rule');
+    page.actions.set([{ type: 'rename', pattern: '{originalName}' }]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#instruction')?.getAttribute('dir')).toBe('auto');
+    expect(fixture.nativeElement.querySelector('#instruction')?.getAttribute('aria-label')).toBeNull();
+    await page.save();
+    fixture.detectChanges();
+
+    const folderError = fixture.nativeElement.querySelector('#source-folder-error');
+    expect(folderError?.textContent).toContain('Choose an authorized source folder');
+    expect(fixture.nativeElement.querySelector('.folder-row')?.contains(folderError)).toBe(true);
+    expect(fixture.nativeElement.querySelector('.folder-row button')?.getAttribute('aria-describedby')).toBe('source-folder-error');
+    expect(save).not.toHaveBeenCalled();
+    fixture.destroy();
+  });
+
   it('passes the interpreter title into the editable builder', async () => {
     const interpreter = TestBed.inject(RuleInterpreterService);
     vi.spyOn(interpreter, 'interpret').mockResolvedValue(undefined);

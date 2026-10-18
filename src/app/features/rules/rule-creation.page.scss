@@ -107,6 +107,7 @@ textarea {
   font: inherit;
   font-size: 13px;
   line-height: 1.65;
+  text-align: start;
 }
 
 textarea:focus {
@@ -355,11 +356,11 @@ textarea::placeholder {
 .field-label { display: grid; gap: 7px; margin: 13px 0; color: #a8b7b1; font-size: 10px; }
 .field-label input, .action-editor select { min-height: 36px; padding: 8px 10px; border: 1px solid #344242; border-radius: 7px; outline: none; color: #e9f1ed; background: #111918; font: inherit; font-size: 11px; }
 .field-label input:focus, .action-editor select:focus { border-color: #74dcba; }
-.field-label span { color: #71807c; font-size: 9px; }
+.field-label span { color: #899698; font-size: 10px; }
 .folder-row, .destination, .save-row, .action-tools, .add-actions { display: flex; align-items: center; gap: 9px; }
 .folder-row, .destination { justify-content: space-between; padding: 13px 0; border-top: 1px solid #293533; }
 .folder-row > div, .destination { color: #c5d2cc; font-size: 10px; }
-.folder-row small { display: block; margin-bottom: 5px; color: #758681; font-size: 8px; letter-spacing: .13em; }
+.folder-row small { display: block; margin-bottom: 5px; color: #a0acae; font-size: 9px; letter-spacing: .13em; }
 .secondary-action, .action-tools button, .add-actions button { padding: 7px 9px; border: 1px solid #344441; border-radius: 6px; color: #b8c9c1; background: #1a2423; font: inherit; font-size: 9px; cursor: pointer; }
 .secondary-action:hover, .add-actions button:hover { border-color: #5d9d83; color: #b7f1dc; }
 .action-editor { display: grid; gap: 8px; padding: 11px; border: 1px solid #303b39; border-radius: 8px; }
@@ -368,7 +369,7 @@ textarea::placeholder {
 .action-tools button:disabled { opacity: .4; cursor: not-allowed; }
 .add-actions { margin-top: 3px; }
 .save-row { justify-content: flex-end; margin-top: 14px; }
-.inline-error { margin: 10px 0; color: #f0a99c; font-size: 11px; }
+.inline-error { margin: 10px 0; color: #f0a99c; font-size: 12px; line-height: 1.5; }
 
 .sr-only {
   position: absolute;

@@ -26,13 +26,13 @@ export class DashboardPagePage {
   readonly selectedRule = computed(
     () => this.store.rules().find((rule) => rule.id === this.selectedRuleId()) ?? null,
   );
-  readonly enabledCount = computed(
-    () => this.store.rules().filter((rule) => rule.enabled).length,
-  );
+  readonly enabledCount = computed(() => this.store.rules().filter((rule) => rule.enabled).length);
   readonly runningCount = computed(
-    () => this.store.rules().filter(
-      (rule) => rule.enabled && this.store.statusFor(rule.id)?.status === 'Running',
-    ).length,
+    () =>
+      this.store
+        .rules()
+        .filter((rule) => rule.enabled && this.store.statusFor(rule.id)?.status === 'Running')
+        .length,
   );
   readonly operationError = signal('');
   readonly dryRunRuleId = signal('');
@@ -43,10 +43,7 @@ export class DashboardPagePage {
   constructor() {
     void this.store.load();
     void this.store.refreshRuntimeStatuses();
-    const refreshHandle = window.setInterval(
-      () => void this.store.refreshRuntimeStatuses(),
-      1000,
-    );
+    const refreshHandle = window.setInterval(() => void this.store.refreshRuntimeStatuses(), 1000);
     this.destroyRef.onDestroy(() => window.clearInterval(refreshHandle));
   }
 
@@ -61,10 +58,14 @@ export class DashboardPagePage {
   navigateRuleList(event: KeyboardEvent, index: number): void {
     const rules = this.store.rules();
     const nextIndex =
-      event.key === 'ArrowDown' ? Math.min(index + 1, rules.length - 1)
-        : event.key === 'ArrowUp' ? Math.max(index - 1, 0)
-          : event.key === 'Home' ? 0
-            : event.key === 'End' ? rules.length - 1
+      event.key === 'ArrowDown'
+        ? Math.min(index + 1, rules.length - 1)
+        : event.key === 'ArrowUp'
+          ? Math.max(index - 1, 0)
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? rules.length - 1
               : -1;
     if (nextIndex < 0) return;
 
@@ -79,8 +80,9 @@ export class DashboardPagePage {
   }
 
   folderName(folderId: string): string {
-    return this.store.folders().find((folder) => folder.id === folderId)?.name
-      ?? 'Authorized folder';
+    return (
+      this.store.folders().find((folder) => folder.id === folderId)?.name ?? 'Authorized folder'
+    );
   }
 
   actionSummary(actions: SavedAction[]): string {
@@ -89,25 +91,35 @@ export class DashboardPagePage {
 
   actionName(action: SavedAction): string {
     switch (action.type) {
-      case 'rename': return 'Rename';
-      case 'move': return 'Move';
-      case 'copy': return 'Copy';
+      case 'rename':
+        return 'Rename';
+      case 'move':
+        return 'Move';
+      case 'copy':
+        return 'Copy';
     }
   }
 
   actionDescription(action: SavedAction): string {
     switch (action.type) {
-      case 'rename': return `Rename to ${action.pattern} (keep original extension)`;
-      case 'move': return `Move to ${this.folderName(action.destinationFolderId)}`;
-      case 'copy': return `Copy to ${this.folderName(action.destinationFolderId)}`;
+      case 'rename':
+        return `Rename to ${action.pattern} (keep original extension)`;
+      case 'move':
+        return `Move to ${this.folderName(action.destinationFolderId)}`;
+      case 'copy':
+        return `Copy to ${this.folderName(action.destinationFolderId)}`;
     }
   }
 
   async toggle(rule: SavedRule): Promise<void> {
     const enabled = !rule.enabled;
-    if (enabled && !window.confirm(
-      `Enable “${rule.title}”? It will monitor ${this.folderName(rule.sourceFolderId)} and may rename, move, or copy new files.`,
-    )) return;
+    if (
+      enabled &&
+      !window.confirm(
+        `Enable “${rule.title}”? It will monitor ${this.folderName(rule.sourceFolderId)} and may rename, move, or copy new files.`,
+      )
+    )
+      return;
 
     this.operationError.set('');
     try {
@@ -155,8 +167,13 @@ export class DashboardPagePage {
   private errorText(error: unknown): string {
     if (typeof error === 'string') return error;
     if (error instanceof Error) return error.message;
-    if (typeof error === 'object' && error !== null && 'message' in error
-      && typeof error.message === 'string') return error.message;
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error &&
+      typeof error.message === 'string'
+    )
+      return error.message;
     return 'Unexpected backend error';
   }
 }

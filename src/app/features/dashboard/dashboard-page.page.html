@@ -47,6 +47,8 @@
               role="option"
               [attr.aria-selected]="selectedRuleId() === rule.id"
               [class.selected]="selectedRuleId() === rule.id"
+              [attr.aria-label]="rule.title"
+              [attr.title]="rule.title"
               (click)="selectRule(rule)"
               (keydown)="navigateRuleList($event, i)">
               <span class="rule-mark" aria-hidden="true">{{ rule.actions[0]?.type === 'rename' ? '↗' : rule.actions[0]?.type === 'copy' ? '⧉' : '⇢' }}</span>

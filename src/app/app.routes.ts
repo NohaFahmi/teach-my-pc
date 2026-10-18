@@ -10,7 +10,10 @@ export const routes: Routes = [
     path: 'rules',
     component: RuleCreationPage,
     title: 'Create rule | TeachMyPC',
-    data: { title: 'Create rule', description: 'Describe a file task and review its safe preview.' },
+    data: {
+      title: 'Create rule',
+      description: 'Describe a file task and review its safe preview.',
+    },
   },
   {
     path: 'activity',

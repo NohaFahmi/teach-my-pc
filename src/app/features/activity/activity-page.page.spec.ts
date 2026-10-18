@@ -13,8 +13,31 @@ describe('ActivityPagePage', () => {
 
   it('loads persisted activity and renders rule, file, action, status, and error', () => {
     const store = TestBed.inject(RuleStoreService);
-    store.rules.set([{ id: 'rule-1', title: 'Organize PDFs', trigger: { type: 'file_created', extensions: ['.pdf'] }, actions: [{ type: 'move', destinationFolderId: 'folder-1' }], sourceFolderId: 'source-1', enabled: true, createdAt: 1, updatedAt: 1 }]);
-    store.activities.set([{ ruleId: 'rule-1', timestamp: 1_800_000_000, sourcePath: '/private/invoice.pdf', sourceFilename: 'invoice.pdf', intendedActions: ['Move'], completedActions: ['Move to Invoices'], resultingPath: '/Invoices/invoice.pdf', status: 'failed', error: 'Destination is unavailable' }]);
+    store.rules.set([
+      {
+        id: 'rule-1',
+        title: 'Organize PDFs',
+        trigger: { type: 'file_created', extensions: ['.pdf'] },
+        actions: [{ type: 'move', destinationFolderId: 'folder-1' }],
+        sourceFolderId: 'source-1',
+        enabled: true,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]);
+    store.activities.set([
+      {
+        ruleId: 'rule-1',
+        timestamp: 1_800_000_000,
+        sourcePath: '/private/invoice.pdf',
+        sourceFilename: 'invoice.pdf',
+        intendedActions: ['Move'],
+        completedActions: ['Move to Invoices'],
+        resultingPath: '/Invoices/invoice.pdf',
+        status: 'failed',
+        error: 'Destination is unavailable',
+      },
+    ]);
     const fixture = TestBed.createComponent(ActivityPagePage);
     fixture.detectChanges();
     const page = fixture.nativeElement as HTMLElement;

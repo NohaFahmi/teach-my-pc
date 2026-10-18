@@ -178,6 +178,16 @@
   }
 }
 
+@media (min-width: 761px) and (max-width: 900px) {
+  .app-shell { grid-template-columns: 64px minmax(0, 1fr); }
+  .sidebar { align-items: center; padding-inline: 8px; }
+  .brand { padding: 0; }
+  .brand-copy, .nav-link > span:not(.nav-icon) { display: none; }
+  .nav-list { width: 100%; }
+  .nav-link { justify-content: center; padding-inline: 0; }
+  .nav-icon { width: 24px; flex-basis: 24px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nav-link {
     transition: none;

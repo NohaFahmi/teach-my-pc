@@ -23,8 +23,14 @@ export class ActivityPagePage {
     return this.store.rules().find((rule) => rule.id === id)?.title ?? 'Deleted rule';
   }
 
-  activitySummary(record: { completedActions: string[]; intendedActions: string[]; resultingPath: string | null }): string {
-    const actions = record.completedActions.length ? record.completedActions : record.intendedActions;
+  activitySummary(record: {
+    completedActions: string[];
+    intendedActions: string[];
+    resultingPath: string | null;
+  }): string {
+    const actions = record.completedActions.length
+      ? record.completedActions
+      : record.intendedActions;
     if (!record.resultingPath) return actions.join(' → ');
     const segments = record.resultingPath.split(/[\\/]/).filter(Boolean);
     const destination = segments.slice(-2).join('/');
