@@ -1,5 +1,7 @@
 # TeachMyPC
 
+![TeachMyPC — natural-language file automation for macOS](docs/TeachMyPC_%20Effortless%20File%20Automation.png)
+
 **Put repetitive file organization on autopilot, without writing a script.**
 
 Sorting downloads or renaming a pile of files is the kind of small chore that keeps coming back. TeachMyPC lets you describe that task in plain language, review the rule it proposes, choose the folders it may access, and explicitly enable it when you are ready.
